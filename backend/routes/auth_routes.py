@@ -22,14 +22,15 @@ def register():
     if not name or not phone or not password or not role:
         return jsonify({"error": "name, phone, password and role are required"}), 400
 
+    clean_phone = str(phone).strip()
     if role not in ["farmer", "buyer", "admin"]:
         return jsonify({"error": "role must be farmer, buyer, or admin"}), 400
 
     # Check if user exists
     users = db.get_all("users")
     for u in users:
-        if u.get("phone") == phone:
-            return jsonify({"error": "An account with this phone number already exists"}), 409
+        if str(u.get("phone", "")).strip() == clean_phone:
+            return jsonify({"error": "An account with this mobile number already exists"}), 409
 
     # Hash password
     password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
@@ -44,7 +45,7 @@ def register():
     user = {
         "id": new_id(),
         "name": name,
-        "phone": phone,
+        "phone": clean_phone,
         "passwordHash": password_hash,
         "role": role,
         "village": village,
@@ -60,7 +61,7 @@ def register():
     token = generate_token(user)
 
     safe_user = {k: v for k, v in user.items() if k != "passwordHash"}
-    return jsonify({"token": token, "user": safe_user}), 201
+    return jsonify({"message": "Account created successfully", "token": token, "user": safe_user}), 201
 
 @auth_bp.route("/login", methods=["POST"])
 def login():
@@ -71,14 +72,19 @@ def login():
     if not phone or not password:
         return jsonify({"error": "phone and password are required"}), 400
 
+    clean_phone = str(phone).strip()
     users = db.get_all("users")
-    user = next((u for u in users if u.get("phone") == phone), None)
+    user = next((u for u in users if str(u.get("phone", "")).strip() == clean_phone), None)
 
     if not user:
-        return jsonify({"error": "Invalid phone number or password"}), 401
+        return jsonify({"error": "Invalid mobile number or password"}), 401
 
-    if not bcrypt.checkpw(password.encode("utf-8"), user.get("passwordHash", "").encode("utf-8")):
-        return jsonify({"error": "Invalid phone number or password"}), 401
+    try:
+        stored_hash = user.get("passwordHash", "")
+        if not stored_hash or not bcrypt.checkpw(password.encode("utf-8"), stored_hash.encode("utf-8")):
+            return jsonify({"error": "Invalid mobile number or password"}), 401
+    except Exception as e:
+        return jsonify({"error": "Invalid mobile number or password"}), 401
 
     token = generate_token(user)
     safe_user = {k: v for k, v in user.items() if k != "passwordHash"}

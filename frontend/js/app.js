@@ -1692,7 +1692,7 @@ const app = {
           return;
         }
 
-        const user = await auth.register({
+        await api.register({
           name,
           phone,
           password,
@@ -1701,7 +1701,15 @@ const app = {
           state
         });
 
-        showToast(`🎉 Welcome to AGRIWEB, ${user.name}! Your account is created.`);
+        showToast("🎉 Account created successfully! Please sign in with your mobile number & password.");
+        
+        // Switch to Sign In tab and pre-fill phone
+        this.setAuthTab("login");
+        if (phoneInput) phoneInput.value = phone;
+        if (passwordInput) {
+          passwordInput.value = "";
+          passwordInput.focus();
+        }
       } else {
         const user = await auth.login(phone, password);
         showToast(`Welcome back, ${user.name}!`);

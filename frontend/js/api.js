@@ -19,7 +19,14 @@ async function apiRequest(path, { method = "GET", body, auth = false } = {}) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(data.error || "Something went wrong");
+    let errMsg = data.error || data.message;
+    if (!errMsg) {
+      if (res.status === 401) errMsg = "Invalid mobile number or password.";
+      else if (res.status === 409) errMsg = "An account with this mobile number already exists.";
+      else if (res.status === 400) errMsg = "Please fill in all required fields.";
+      else errMsg = `Server error (${res.status}). Please try again.`;
+    }
+    throw new Error(errMsg);
   }
   return data;
 }
