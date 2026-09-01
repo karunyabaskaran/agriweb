@@ -10,81 +10,91 @@ order_bp = Blueprint("orders", __name__, url_prefix="/api/orders")
 @require_role("buyer", "farmer", "admin")
 def create_order():
     """Buyer places a direct order on a listed produce lot."""
-    data = request.get_json() or {}
-    produce_id = data.get("produceId")
-    quantity_kg = data.get("quantityKg")
-
-    if not produce_id or not quantity_kg:
-        return jsonify({"error": "produceId and quantityKg are required"}), 400
-
     try:
-        req_qty = float(quantity_kg)
-    except ValueError:
-        return jsonify({"error": "Invalid quantityKg"}), 400
+        data = request.get_json() or {}
+        produce_id = data.get("produceId")
+        quantity_kg = data.get("quantityKg")
 
-    produce = db.get_by_id("produce", produce_id)
-    if not produce or produce.get("status") not in ["listed", "pooled"]:
-        return jsonify({"error": "This produce listing is not available"}), 404
+        if not produce_id or quantity_kg is None:
+            return jsonify({"error": "produceId and quantityKg are required"}), 400
 
-    avail_qty = float(produce.get("quantityKg", 0))
-    if req_qty <= 0 or req_qty > avail_qty:
-        return jsonify({"error": f"Requested quantity ({req_qty}kg) exceeds available ({avail_qty}kg)"}), 400
+        try:
+            req_qty = float(quantity_kg)
+        except (ValueError, TypeError):
+            return jsonify({"error": "Invalid quantityKg"}), 400
 
-    buyer = db.get_by_id("users", g.user["id"])
-    buyer_name = buyer.get("name", g.user.get("name", "Buyer"))
-    unit_price = float(produce.get("askingPricePerKg", 0))
-    total_price = round(req_qty * unit_price, 2)
+        produce = db.get_by_id("produce", produce_id)
+        if not produce or produce.get("status") not in ["listed", "pooled"]:
+            return jsonify({"error": "This produce listing is not available"}), 404
 
-    order_id = f"ord-{new_id()[:8]}"
-    transaction_id = f"TXN_{order_id.upper()}"
+        avail_qty = float(produce.get("quantityKg", 0))
+        if req_qty <= 0 or req_qty > avail_qty:
+            return jsonify({"error": f"Requested quantity ({req_qty}kg) exceeds available ({avail_qty}kg)"}), 400
 
-    origin = produce.get("coordinates") or {"lat": 19.076, "lng": 72.877, "name": produce.get("village")}
-    dest = buyer.get("coordinates") or {"lat": 19.033, "lng": 73.029, "name": buyer.get("village", "Buyer Hub")}
+        buyer = db.get_by_id("users", g.user["id"]) or {}
+        if not isinstance(buyer, dict):
+            buyer = {}
 
-    order = {
-        "id": order_id,
-        "produceId": produce_id,
-        "commodity": produce.get("commodity"),
-        "variety": produce.get("variety", ""),
-        "farmerId": produce.get("farmerId"),
-        "farmerName": produce.get("farmerName"),
-        "buyerId": g.user["id"],
-        "buyerName": buyer_name,
-        "quantityKg": req_qty,
-        "pricePerKg": unit_price,
-        "totalPrice": total_price,
-        "status": "confirmed", # confirmed -> dispatched -> delivered -> rated
-        "paymentStatus": "held_in_escrow", # held_in_escrow -> released_to_farmer
-        "transactionId": transaction_id,
-        "deliveryOrigin": origin,
-        "deliveryDestination": dest,
-        "createdAt": current_iso_time()
-    }
+        buyer_name = buyer.get("name") or g.user.get("name", "Buyer")
+        unit_price = float(produce.get("askingPricePerKg", 0))
+        total_price = round(req_qty * unit_price, 2)
 
-    db.insert("orders", order)
+        order_id = f"ord-{new_id()[:8]}"
+        transaction_id = f"TXN_{order_id.upper()}"
 
-    # Record payment transaction
-    payment_record = {
-        "id": f"pay-{new_id()[:8]}",
-        "orderId": order_id,
-        "amount": total_price,
-        "method": data.get("paymentMethod", "UPI / Escrow"),
-        "status": "escrow_secured",
-        "escrowStatus": "held_in_escrow",
-        "farmerShare": round(total_price * 0.99, 2),
-        "platformFee": round(total_price * 0.01, 2),
-        "timestamp": current_iso_time()
-    }
-    db.insert("payments", payment_record)
+        origin = produce.get("coordinates") or {"lat": 19.076, "lng": 72.877, "name": produce.get("village", "Farm Village")}
+        dest = buyer.get("coordinates") or {"lat": 19.033, "lng": 73.029, "name": buyer.get("village", "Buyer Hub")}
 
-    # Deduct quantity from produce listing
-    remaining_qty = avail_qty - req_qty
-    db.update("produce", produce_id, {
-        "quantityKg": remaining_qty,
-        "status": "sold" if remaining_qty <= 0 else produce.get("status")
-    })
+        order = {
+            "id": order_id,
+            "produceId": produce_id,
+            "commodity": produce.get("commodity"),
+            "variety": produce.get("variety", ""),
+            "farmerId": produce.get("farmerId"),
+            "farmerName": produce.get("farmerName"),
+            "farmerPhone": produce.get("farmerPhone", ""),
+            "buyerId": g.user["id"],
+            "buyerName": buyer_name,
+            "buyerPhone": buyer.get("phone") or g.user.get("phone", ""),
+            "quantityKg": req_qty,
+            "pricePerKg": unit_price,
+            "totalPrice": total_price,
+            "status": "confirmed", # confirmed -> dispatched -> delivered -> rated
+            "paymentStatus": "held_in_escrow", # held_in_escrow -> released_to_farmer
+            "transactionId": transaction_id,
+            "deliveryOrigin": origin,
+            "deliveryDestination": dest,
+            "createdAt": current_iso_time()
+        }
 
-    return jsonify({"order": order, "payment": payment_record}), 201
+        db.insert("orders", order)
+
+        # Record payment transaction
+        payment_record = {
+            "id": f"pay-{new_id()[:8]}",
+            "orderId": order_id,
+            "amount": total_price,
+            "method": data.get("paymentMethod", "UPI / Escrow Guaranteed"),
+            "status": "escrow_secured",
+            "escrowStatus": "held_in_escrow",
+            "farmerShare": round(total_price * 0.99, 2),
+            "platformFee": round(total_price * 0.01, 2),
+            "timestamp": current_iso_time()
+        }
+        db.insert("payments", payment_record)
+
+        # Deduct quantity from produce listing
+        remaining_qty = avail_qty - req_qty
+        db.update("produce", produce_id, {
+            "quantityKg": remaining_qty,
+            "status": "sold" if remaining_qty <= 0 else produce.get("status")
+        })
+
+        return jsonify({"order": order, "payment": payment_record}), 201
+    except Exception as e:
+        print(f"Error creating order: {e}")
+        return jsonify({"error": f"Failed to place order: {str(e)}"}), 500
+
 
 @order_bp.route("/mine", methods=["GET"])
 @auth_required
