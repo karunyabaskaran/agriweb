@@ -90,65 +90,80 @@ def get_produce_details(item_id):
 @require_role("farmer")
 def create_produce():
     """Farmer posts a new produce lot."""
-    data = request.get_json() or {}
-    commodity = data.get("commodity")
-    quantity_kg = data.get("quantityKg")
-    asking_price = data.get("askingPricePerKg") if data.get("askingPricePerKg") is not None else data.get("directPricePerKg")
-    variety = data.get("variety", "Standard Hybrid")
-    grade = data.get("grade", "A")
-    village = data.get("village") or data.get("location")
-    state = data.get("state")
-    harvest_date = data.get("harvestDate")
-    shelf_life_days = data.get("shelfLifeDays", 10)
-    lat = data.get("lat")
-    lng = data.get("lng")
+    try:
+        data = request.get_json() or {}
+        commodity = data.get("commodity")
+        quantity_kg = data.get("quantityKg")
+        asking_price = data.get("askingPricePerKg") if data.get("askingPricePerKg") is not None else data.get("directPricePerKg")
+        variety = data.get("variety", "Standard Hybrid")
+        grade = data.get("grade", "A")
+        village = data.get("village") or data.get("location")
+        state = data.get("state")
+        harvest_date = data.get("harvestDate")
+        shelf_life_days = data.get("shelfLifeDays", 10)
+        lat = data.get("lat")
+        lng = data.get("lng")
 
-    if not commodity or quantity_kg is None or asking_price is None:
-        return jsonify({"error": "commodity, quantityKg, and askingPricePerKg (or directPricePerKg) are required"}), 400
+        if not commodity or quantity_kg is None or asking_price is None:
+            return jsonify({"error": "commodity, quantityKg, and askingPricePerKg are required"}), 400
 
-    # Enforce Price Cap (Admin Phase 5)
-    cap_id = f"cap_{commodity.strip().lower()}"
-    cap = db.get_by_id("priceCaps", cap_id)
-    if cap and cap.get("maxPricePerKg"):
-        max_price = cap["maxPricePerKg"]
-        if float(asking_price) > max_price:
-            return jsonify({"error": f"Price exceeds admin enforced cap of ₹{max_price}/kg for {commodity}"}), 400
+        try:
+            qty_val = float(quantity_kg)
+            price_val = float(asking_price)
+        except ValueError:
+            return jsonify({"error": "quantityKg and askingPricePerKg must be valid numbers"}), 400
 
-    farmer = db.get_by_id("users", g.user["id"])
-    farmer_name = farmer.get("name", g.user.get("name", "Farmer"))
-    farmer_phone = farmer.get("phone", "")
-    farmer_trust = farmer.get("trustScore", 4.5)
+        # Enforce Price Cap (Admin Phase 5)
+        cap_id = f"cap_{str(commodity).strip().lower()}"
+        cap = db.get_by_id("priceCaps", cap_id) or {}
+        if isinstance(cap, dict) and cap.get("maxPricePerKg"):
+            max_price = float(cap["maxPricePerKg"])
+            if price_val > max_price:
+                return jsonify({"error": f"Price exceeds admin enforced cap of ₹{max_price}/kg for {commodity}"}), 400
 
-    coords = farmer.get("coordinates")
-    if lat and lng:
-        coords = {"lat": float(lat), "lng": float(lng)}
-    elif not coords:
-        coords = {"lat": 19.076, "lng": 72.877}
+        farmer = db.get_by_id("users", g.user["id"]) or {}
+        if not isinstance(farmer, dict):
+            farmer = {}
+        farmer_name = farmer.get("name") or g.user.get("name", "Farmer")
+        farmer_phone = farmer.get("phone") or g.user.get("phone", "")
+        farmer_trust = farmer.get("trustScore", 4.5)
 
-    item = {
-        "id": new_id(),
-        "farmerId": g.user["id"],
-        "farmerName": farmer_name,
-        "farmerPhone": farmer_phone,
-        "farmerTrustScore": farmer_trust,
-        "commodity": commodity.strip().title(),
-        "variety": variety,
-        "quantityKg": float(quantity_kg),
-        "askingPricePerKg": float(asking_price),
-        "grade": grade.upper(),
-        "village": village or farmer.get("village", "Farm Village"),
-        "state": state or farmer.get("state", "State"),
-        "coordinates": coords,
-        "harvestDate": harvest_date,
-        "shelfLifeDays": int(shelf_life_days),
-        "status": "listed", # listed -> pooled -> sold
-        "poolId": None,
-        "imagePath": data.get("imagePath"), # Base64 Image
-        "createdAt": current_iso_time()
-    }
+        coords = farmer.get("coordinates") if isinstance(farmer, dict) else None
+        if lat and lng:
+            try:
+                coords = {"lat": float(lat), "lng": float(lng)}
+            except ValueError:
+                coords = {"lat": 19.076, "lng": 72.877}
+        elif not coords:
+            coords = {"lat": 19.076, "lng": 72.877}
 
-    db.insert("produce", item)
-    return jsonify(item), 201
+        item = {
+            "id": new_id(),
+            "farmerId": g.user["id"],
+            "farmerName": farmer_name,
+            "farmerPhone": farmer_phone,
+            "farmerTrustScore": farmer_trust,
+            "commodity": str(commodity).strip().title(),
+            "variety": variety,
+            "quantityKg": qty_val,
+            "askingPricePerKg": price_val,
+            "grade": str(grade).upper(),
+            "village": village or farmer.get("village", "Farm Village") or "Farm Village",
+            "state": state or farmer.get("state", "State") or "State",
+            "coordinates": coords,
+            "harvestDate": harvest_date,
+            "shelfLifeDays": int(shelf_life_days) if str(shelf_life_days).isdigit() else 10,
+            "status": "listed", # listed -> pooled -> sold
+            "poolId": None,
+            "imagePath": data.get("imagePath"), # Base64 Image
+            "createdAt": current_iso_time()
+        }
+
+        db.insert("produce", item)
+        return jsonify(item), 201
+    except Exception as e:
+        print(f"Error creating produce: {e}")
+        return jsonify({"error": f"Failed to post product: {str(e)}"}), 500
 
 @produce_bp.route("/<item_id>", methods=["PATCH"])
 @auth_required
