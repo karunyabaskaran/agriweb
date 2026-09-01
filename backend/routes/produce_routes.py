@@ -132,12 +132,19 @@ def create_produce():
             if price_val > max_price:
                 return jsonify({"error": f"Price exceeds admin enforced cap of ₹{max_price}/kg for {commodity}"}), 400
 
-        farmer = db.get_by_id("users", g.user["id"]) or {}
-        if not isinstance(farmer, dict):
-            farmer = {}
-        farmer_name = farmer.get("name") or g.user.get("name", "Farmer")
-        farmer_phone = farmer.get("phone") or g.user.get("phone", "")
+        user_id = str(g.user.get("id", "")).strip()
+        user_phone = str(g.user.get("phone", "")).strip()
+        user_name = str(g.user.get("name", "")).strip()
+
+        farmer = db.get_by_id("users", user_id) or {}
+        if not isinstance(farmer, dict) or not farmer:
+            all_users = db.get_all("users") or []
+            farmer = next((u for u in all_users if isinstance(u, dict) and (str(u.get("id")) == user_id or str(u.get("phone")) == user_phone or str(u.get("name")).lower() == user_name.lower())), {})
+
+        farmer_name = farmer.get("name") or user_name or "Farmer"
+        farmer_phone = farmer.get("phone") or user_phone or user_id
         farmer_trust = farmer.get("trustScore", 4.5)
+
 
         coords = farmer.get("coordinates") if isinstance(farmer, dict) else None
         if lat and lng:

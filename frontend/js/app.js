@@ -1194,8 +1194,8 @@ const app = {
       let myItems = [];
       try {
         myItems = await api.getMyProduce();
-      } catch (e) {
-        console.warn("api.getMyProduce fallback to api.getProduce()", e);
+      } catch (err) {
+        console.warn("api.getMyProduce failed, falling back to public listing filter:", err);
       }
 
       if (!myItems || myItems.length === 0) {
@@ -1222,12 +1222,12 @@ const app = {
       // Automatically refresh embedded incoming orders table
       this.loadOrdersLedger();
 
-
-      if (myItems.length === 0) {
+      if (!myItems || myItems.length === 0) {
         tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 30px; color:var(--text-dim);">You have not listed any products yet. Click "Post Product Lot" above to start selling!</td></tr>`;
         if (cardsGrid) cardsGrid.innerHTML = "";
         return;
       }
+
 
 
       tableBody.innerHTML = myItems
@@ -1877,17 +1877,13 @@ const app = {
       });
 
       this.closeModal("createProduceModal");
-      showToast("🌱 Product listed in Marketplace successfully!", "success");
-
-      // Auto-navigate to Farmer's Listed Products Inventory view & load inventory
-      this.navigate("my-products");
-      this.loadMyProducts();
+      showToast("Product listed in Marketplace successfully!");
+      this.refreshCurrentView();
       if (auth.isLoggedIn()) this.renderDashboardSummary();
     } catch (e) {
       showToast(e.message, "error");
     }
   },
-
 
   // ----------------------------------------------------
   // Auth Form Controls

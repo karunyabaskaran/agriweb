@@ -12,10 +12,12 @@ def generate_token(user):
         "id": user["id"],
         "role": user["role"],
         "name": user["name"],
+        "phone": user.get("phone", ""),
         "exp": datetime.utcnow() + timedelta(days=7),
         "iat": datetime.utcnow()
     }
     return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+
 
 def auth_required(f):
     """Decorator ensuring request contains a valid Bearer JWT."""
