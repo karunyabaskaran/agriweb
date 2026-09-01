@@ -1346,11 +1346,15 @@ const app = {
     if (!item) return;
 
     this.selectedProduceForOrder = item;
+    this.customerCoordinates = null;
+
     const modal = document.getElementById("orderModal");
     const title = document.getElementById("orderModalTitle");
     const maxQtyEl = document.getElementById("orderModalMaxQty");
     const priceEl = document.getElementById("orderModalPrice");
     const qtyInput = document.getElementById("orderQtyInput");
+    const addrInput = document.getElementById("orderDeliveryAddress");
+    const gpsFeedback = document.getElementById("gpsFeedback");
 
     if (title) title.textContent = `Buy ${item.commodity} from ${item.farmerName}`;
     if (maxQtyEl) maxQtyEl.textContent = `${item.quantityKg} kg`;
@@ -1361,7 +1365,58 @@ const app = {
       this.updateOrderSummary();
     }
 
+    if (addrInput) {
+      addrInput.value = auth.currentUser?.village ? `${auth.currentUser.village}, ${auth.currentUser.state || ""}` : "";
+    }
+    if (gpsFeedback) {
+      gpsFeedback.style.display = "none";
+      gpsFeedback.textContent = "";
+    }
+
     if (modal) modal.classList.add("open");
+  },
+
+  fetchGPSLocation() {
+    const feedback = document.getElementById("gpsFeedback");
+    const addrInput = document.getElementById("orderDeliveryAddress");
+
+    if (!navigator.geolocation) {
+      showToast("Geolocation is not supported by your browser", "warning");
+      return;
+    }
+
+    showToast("📍 Fetching device GPS location...", "info");
+    if (feedback) {
+      feedback.style.display = "block";
+      feedback.style.color = "var(--primary)";
+      feedback.textContent = "⏳ Accessing GPS satellite coordinates...";
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        this.customerCoordinates = { lat, lng };
+
+        const formattedAddress = `GPS Location (${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E)`;
+        if (addrInput) addrInput.value = formattedAddress;
+
+        if (feedback) {
+          feedback.style.color = "var(--success)";
+          feedback.textContent = `✔ GPS Acquired: Lat ${lat.toFixed(4)}, Lng ${lng.toFixed(4)}`;
+        }
+        showToast("📍 GPS Location captured successfully!", "success");
+      },
+      (error) => {
+        console.warn("GPS fetch error:", error);
+        if (feedback) {
+          feedback.style.color = "var(--danger)";
+          feedback.textContent = `⚠️ GPS Error: ${error.message}. Please enter address manually below.`;
+        }
+        showToast("Could not auto-fetch location. Please enter delivery address manually.", "warning");
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
   },
 
   updateOrderSummary() {
@@ -1390,18 +1445,30 @@ const app = {
       return;
     }
 
+    const deliveryAddress = document.getElementById("orderDeliveryAddress")?.value || "";
+    if (!deliveryAddress.trim()) {
+      showToast("Please enter a delivery address or click 'Use My GPS Location'", "warning");
+      return;
+    }
+
     try {
       const btn = document.getElementById("orderConfirmBtn");
       if (btn) btn.disabled = true;
 
-      const res = await api.createOrder({
+      const payload = {
         produceId: this.selectedProduceForOrder.id,
         quantityKg: qty,
-        paymentMethod: "UPI / Escrow Guaranteed"
-      });
+        paymentMethod: "UPI / Escrow Guaranteed",
+        deliveryAddress: deliveryAddress.trim()
+      };
+      if (this.customerCoordinates) {
+        payload.coordinates = this.customerCoordinates;
+      }
+
+      const res = await api.createOrder(payload);
 
       this.closeModal("orderModal");
-      showToast(`Order placed successfully! Funds secured in Escrow.`, "success");
+      showToast(`Order placed successfully! Awaiting farmer approval & shipment trigger.`, "success");
 
       // Navigate to orders & update dashboard stats
       this.navigate("orders");
@@ -1413,6 +1480,7 @@ const app = {
       if (btn) btn.disabled = false;
     }
   },
+
 
   // ----------------------------------------------------
   // Orders & Payment Escrow Ledger
@@ -1426,6 +1494,19 @@ const app = {
     try {
       const myOrders = await api.getMyOrders();
       this.allOrders = myOrders || [];
+
+      // Update farmer header notification badge counter
+      if (auth.getRole() === "farmer") {
+        const pendingCount = this.allOrders.filter((o) => o.status === "pending_approval").length;
+        const navMyOrders = document.getElementById("navMyOrders");
+        if (navMyOrders) {
+          if (pendingCount > 0) {
+            navMyOrders.innerHTML = `📋 Direct Orders <span style="background:#E53E3E; color:#fff; padding:2px 7px; border-radius:12px; font-size:0.75rem; font-weight:800; margin-left:4px;">🔴 ${pendingCount}</span>`;
+          } else {
+            navMyOrders.innerHTML = `📋 Direct Orders`;
+          }
+        }
+      }
 
       if (this.allOrders.length === 0) {
         ordersBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-dim); padding:30px;">No direct orders placed yet. Browse Marketplace to order fresh products!</td></tr>`;
@@ -1453,6 +1534,9 @@ const app = {
           } else if (isRejected) {
             statusBadge = "✖ Declined / Refunded";
             badgeColor = "#E53E3E";
+          } else if (isDispatched || isConfirmed) {
+            statusBadge = "🚛 In Shipment Transit";
+            badgeColor = "#3182CE";
           } else if (o.paymentStatus === "escrow_released") {
             statusBadge = "Funds Released to Farmer";
             badgeColor = "var(--success)";
@@ -1468,12 +1552,12 @@ const app = {
             if (isPending) {
               actionContent = `
                 <div style="display:flex; gap:6px;">
-                  <button class="btn btn-primary btn-sm" onclick="app.acceptFarmerOrder('${o.id}')">✔ Accept Order</button>
+                  <button class="btn btn-primary btn-sm" onclick="app.acceptFarmerOrder('${o.id}')">✔ Accept & Start Shipment</button>
                   <button class="btn btn-danger btn-sm" onclick="app.rejectFarmerOrder('${o.id}')">✖ Reject</button>
                 </div>
               `;
             } else if (isConfirmed || isDispatched) {
-              actionContent = `<span style="font-size:0.85rem; color:var(--success); font-weight:700;">✔ Order Accepted</span>`;
+              actionContent = `<span style="font-size:0.85rem; color:var(--primary); font-weight:700;">🚛 Shipment In Transit</span>`;
             } else if (isRejected) {
               actionContent = `<span style="font-size:0.85rem; color:var(--danger); font-weight:700;">✖ Declined</span>`;
             } else {
@@ -1481,7 +1565,7 @@ const app = {
             }
           } else {
             if (isPending) {
-              actionContent = `<span style="font-size:0.85rem; color:#DD6B20; font-weight:700;">⏳ Awaiting Farmer</span>`;
+              actionContent = `<span style="font-size:0.85rem; color:#DD6B20; font-weight:700;">⏳ Awaiting Farmer Approval</span>`;
             } else if (canConfirmDelivery) {
               actionContent = `<button class="btn btn-primary btn-sm" onclick="app.updateOrderStatus('${o.id}', 'delivered')">✔ Confirm Received</button>`;
             } else if (canRate) {
@@ -1493,10 +1577,15 @@ const app = {
             }
           }
 
+          const deliveryLoc = o.deliveryAddress || (o.deliveryDestination ? o.deliveryDestination.name : "Customer Hub");
+
           return `
             <tr>
               <td><code>#${o.id}</code></td>
-              <td><strong>${o.commodity}</strong> (${o.variety || "Hybrid"})</td>
+              <td>
+                <strong>${o.commodity}</strong> (${o.variety || "Hybrid"})
+                <div style="font-size:0.78rem; color:var(--text-dim);">📍 Delivery: ${deliveryLoc}</div>
+              </td>
               <td>${o.farmerName}</td>
               <td>${o.buyerName || "Direct Buyer"}</td>
               <td>${o.quantityKg} kg</td>
@@ -1508,7 +1597,7 @@ const app = {
                 <div class="order-timeline">
                   <span class="timeline-step ${isStep1 ? (isStep2 ? "completed" : "active") : ""}">${t("stepPlaced", "1. Placed")}</span>
                   <span class="timeline-arrow">➔</span>
-                  <span class="timeline-step ${isStep2 ? (isStep3 ? "completed" : "active") : ""}">${t("stepDispatched", "2. Dispatched")}</span>
+                  <span class="timeline-step ${isStep2 ? (isStep3 ? "completed" : "active") : ""}">${t("stepDispatched", "2. Shipment")}</span>
                   <span class="timeline-arrow">➔</span>
                   <span class="timeline-step ${isStep3 ? "completed" : ""}">${t("stepDelivered", "3. Delivered")}</span>
                 </div>
@@ -1524,6 +1613,7 @@ const app = {
       ordersBody.innerHTML = `<tr><td colspan="8" style="color:var(--text-dim);">Error: ${e.message}</td></tr>`;
     }
   },
+
 
   async acceptFarmerOrder(orderId) {
     try {

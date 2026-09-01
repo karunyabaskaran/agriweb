@@ -553,12 +553,24 @@
       </div>
 
       <div class="form-group">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <label class="form-label" style="margin:0;">Delivery Address</label>
+          <button type="button" class="btn btn-outline btn-sm" style="font-size:0.78rem; padding:4px 10px; border-color:var(--primary); color:var(--primary);" onclick="app.fetchGPSLocation()">
+            📍 Use My GPS Location
+          </button>
+        </div>
+        <textarea id="orderDeliveryAddress" class="form-textarea" rows="2" placeholder="House / Shop No, Street, Village/City, State, Pincode" required></textarea>
+        <div id="gpsFeedback" style="font-size:0.78rem; color:var(--primary); margin-top:4px; font-weight:700; display:none;"></div>
+      </div>
+
+      <div class="form-group">
         <label class="form-label" data-i18n="lblPaymentMode">Payment & Escrow Protection</label>
         <select class="form-select">
           <option value="upi">UPI / Instant Bank Escrow</option>
           <option value="card">Corporate Card / NEFT</option>
         </select>
       </div>
+
 
       <!-- Summary -->
       <div style="border-top:1.5px solid var(--border-light); padding-top:12px; margin-top:12px; margin-bottom:16px;">

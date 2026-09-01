@@ -43,7 +43,13 @@ def create_order():
         transaction_id = f"TXN_{order_id.upper()}"
 
         origin = produce.get("coordinates") or {"lat": 19.076, "lng": 72.877, "name": produce.get("village", "Farm Village")}
-        dest = buyer.get("coordinates") or {"lat": 19.033, "lng": 73.029, "name": buyer.get("village", "Buyer Hub")}
+        delivery_address = data.get("deliveryAddress") or data.get("address") or buyer.get("village", "Buyer Hub")
+        custom_coords = data.get("coordinates")
+        if custom_coords and isinstance(custom_coords, dict) and "lat" in custom_coords and "lng" in custom_coords:
+            dest = {"lat": float(custom_coords["lat"]), "lng": float(custom_coords["lng"]), "name": str(delivery_address)}
+        else:
+            dest = buyer.get("coordinates") or {"lat": 19.033, "lng": 73.029, "name": str(delivery_address)}
+
 
         order = {
             "id": order_id,
@@ -59,7 +65,8 @@ def create_order():
             "quantityKg": req_qty,
             "pricePerKg": unit_price,
             "totalPrice": total_price,
-            "status": "pending_approval", # pending_approval -> confirmed -> dispatched -> delivered -> rated
+            "deliveryAddress": delivery_address,
+            "status": "pending_approval", # pending_approval -> confirmed/dispatched -> delivered -> rated
             "paymentStatus": "held_in_escrow", # held_in_escrow -> released_to_farmer
             "transactionId": transaction_id,
             "deliveryOrigin": origin,
@@ -100,7 +107,7 @@ def create_order():
 @auth_required
 @require_role("farmer", "admin")
 def accept_order(order_id):
-    """Farmer accepts a pending purchase order."""
+    """Farmer accepts a pending purchase order and initiates product shipment."""
     try:
         clean_order_id = str(order_id).replace("#", "").strip()
         order = db.get_by_id("orders", clean_order_id)
@@ -113,10 +120,12 @@ def accept_order(order_id):
 
         target_id = order.get("id", clean_order_id)
         updated = db.update("orders", target_id, {
-            "status": "confirmed",
-            "paymentStatus": "escrow_secured"
+            "status": "dispatched",
+            "paymentStatus": "escrow_secured",
+            "shipmentStatus": "in_transit",
+            "shipmentStartedAt": current_iso_time()
         })
-        return jsonify({"message": "Order accepted successfully", "order": updated or order}), 200
+        return jsonify({"message": "Order approved! Product shipment has officially started.", "order": updated or order}), 200
     except Exception as e:
         return jsonify({"error": f"Failed to accept order: {str(e)}"}), 500
 
@@ -158,23 +167,37 @@ def reject_order(order_id):
         return jsonify({"error": f"Failed to reject order: {str(e)}"}), 500
 
 
-
 @order_bp.route("/mine", methods=["GET"])
 @auth_required
 def get_my_orders():
     """Role-aware orders fetch: Farmer sees incoming orders; Buyer sees placed orders; Admin sees all."""
-    all_orders = db.get_all("orders")
-    role = g.user.get("role")
-    user_id = g.user.get("id")
+    all_orders = db.get_all("orders") or []
+    role = str(g.user.get("role", "")).strip().lower()
+    user_id = str(g.user.get("id", "")).strip()
+    user_phone = str(g.user.get("phone", "")).strip()
+    user_name = str(g.user.get("name", "")).strip().lower()
 
     if role == "farmer":
-        mine = [o for o in all_orders if o.get("farmerId") == user_id]
+        mine = [
+            o for o in all_orders if isinstance(o, dict) and (
+                user_id == str(o.get("farmerId", "")) or
+                (user_phone and user_phone == str(o.get("farmerPhone", ""))) or
+                (user_name and user_name == str(o.get("farmerName", "")).lower())
+            )
+        ]
     elif role == "buyer":
-        mine = [o for o in all_orders if o.get("buyerId") == user_id]
+        mine = [
+            o for o in all_orders if isinstance(o, dict) and (
+                user_id == str(o.get("buyerId", "")) or
+                (user_phone and user_phone == str(o.get("buyerPhone", ""))) or
+                (user_name and user_name == str(o.get("buyerName", "")).lower())
+            )
+        ]
     else: # admin
-        mine = all_orders
+        mine = [o for o in all_orders if isinstance(o, dict)]
 
     return jsonify(mine), 200
+
 
 @order_bp.route("/<order_id>", methods=["GET"])
 @auth_required
