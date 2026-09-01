@@ -1156,6 +1156,9 @@ const app = {
         <button onclick="app.shareProduce('${item.id}')" class="btn-whatsapp" style="padding:10px 16px;">
           ${t("btnShareWhatsapp", "📱 Share on WhatsApp")}
         </button>
+        <button onclick="app.copyProductLink('${item.id}')" class="btn btn-outline" style="padding:10px 14px;">
+          🔗 Copy Link
+        </button>
         <button class="btn btn-outline" onclick="app.closeModal('productDetailsModal')">
           Close
         </button>
@@ -1744,28 +1747,33 @@ const app = {
     const farmerName = item ? item.farmerName : "";
     const village = item ? item.village : "";
     const state = item ? item.state : "";
-    const grade = item ? item.grade : "A";
-    const qty = item ? item.quantityKg : "";
+    const grade = item ? item.grade : "Standard";
 
     const liveOrigin = window.location.origin.includes("localhost") || window.location.origin.includes("127.0.0.1")
       ? "https://kisansetu-agriweb.onrender.com"
       : window.location.origin;
 
     const productUrl = `${liveOrigin}/?produceId=${itemId}`;
-    const shareMessage = `Check out fresh ${commodity} (Grade ${grade}) on AGRIWEB!\n\n💰 Direct Rate: ₹${askingPrice}/kg\n👨‍🌾 Farmer: ${farmerName} (${village}, ${state})\n📦 Available Qty: ${qty} kg\n\n👇 View & Order Product Link:\n${productUrl}`;
+    const shareMessage = `Check out fresh ${commodity} (Grade ${grade}) on AGRIWEB!\nDirect Rate: ₹${askingPrice}/kg from ${farmerName}, ${village}, ${state}.\n\nView product link:\n${productUrl}`;
 
-    if (navigator.share) {
-      navigator.share({
-        title: `AGRIWEB - ${commodity} (${grade})`,
-        text: shareMessage,
-        url: productUrl
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareMessage)}`;
+    window.open(whatsappUrl, "_blank");
+  },
+
+  copyProductLink(itemId) {
+    const liveOrigin = window.location.origin.includes("localhost") || window.location.origin.includes("127.0.0.1")
+      ? "https://kisansetu-agriweb.onrender.com"
+      : window.location.origin;
+
+    const productUrl = `${liveOrigin}/?produceId=${itemId}`;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(productUrl).then(() => {
+        showToast("Product URL copied to clipboard!", "success");
       }).catch(() => {
-        const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
-        window.open(whatsappUrl, "_blank");
+        showToast(`Product URL: ${productUrl}`, "info");
       });
     } else {
-      const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
-      window.open(whatsappUrl, "_blank");
+      showToast(`Product URL: ${productUrl}`, "info");
     }
   },
 
