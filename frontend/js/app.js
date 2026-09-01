@@ -1418,9 +1418,11 @@ const app = {
         showToast(msg, "error");
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    ),
+    );
+  },
 
   async confirmOrder() {
+
     if (!this.selectedProduceForOrder) return;
 
     const qty = parseFloat(document.getElementById("orderQtyInput")?.value || "0");
