@@ -92,6 +92,43 @@ ALTER TABLE public.produce ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.mandi_prices ENABLE ROW LEVEL SECURITY;
 
+-- 6. LOGISTICS TABLES
+CREATE TABLE IF NOT EXISTS public.warehouses (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    location TEXT NOT NULL,
+    capacity NUMERIC NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.vehicles (
+    id TEXT PRIMARY KEY,
+    license_plate TEXT NOT NULL,
+    capacity NUMERIC NOT NULL,
+    status TEXT DEFAULT 'available' CHECK (status IN ('available','in_transit','maintenance')),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.routes (
+    id TEXT PRIMARY KEY,
+    source_warehouse_id TEXT REFERENCES public.warehouses(id) ON DELETE SET NULL,
+    destination_farm_id TEXT REFERENCES public.users(id) ON DELETE SET NULL,
+    vehicle_id TEXT REFERENCES public.vehicles(id) ON DELETE SET NULL,
+    distance_km NUMERIC,
+    estimated_time INTERVAL,
+    status TEXT DEFAULT 'planned' CHECK (status IN ('planned','in_progress','completed','cancelled')),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.demand_forecasts (
+    id TEXT PRIMARY KEY,
+    produce_id TEXT REFERENCES public.produce(id) ON DELETE CASCADE,
+    forecast_date DATE,
+    predicted_quantity NUMERIC,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+
 -- ALLOW PUBLIC ANONYMOUS / SERVICE ACCESS POLICIES
 CREATE POLICY "Allow public read users" ON public.users FOR SELECT USING (true);
 CREATE POLICY "Allow public insert users" ON public.users FOR INSERT WITH CHECK (true);

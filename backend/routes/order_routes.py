@@ -7,7 +7,7 @@ order_bp = Blueprint("orders", __name__, url_prefix="/api/orders")
 
 @order_bp.route("", methods=["POST"])
 @auth_required
-@require_role("buyer")
+@require_role("buyer", "farmer", "admin")
 def create_order():
     """Buyer places a direct order on a listed produce lot."""
     data = request.get_json() or {}
@@ -150,7 +150,7 @@ def update_order_status():
 
 @order_bp.route("/<order_id>/rate", methods=["POST"])
 @auth_required
-@require_role("buyer")
+@require_role("buyer", "farmer", "admin")
 def rate_order(order_id):
     """Buyer rates the farmer's produce quality and confirms grade."""
     data = request.get_json() or {}

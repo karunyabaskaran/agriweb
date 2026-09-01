@@ -49,10 +49,12 @@ def require_role(*roles):
             if not hasattr(g, "user") or not g.user:
                 return jsonify({"error": "Authentication required"}), 401
             
-            user_role = g.user.get("role")
-            if user_role not in roles:
+            user_role = str(g.user.get("role", "")).strip().lower()
+            allowed_roles = [str(r).strip().lower() for r in roles]
+            if user_role not in allowed_roles:
                 return jsonify({"error": f"Access restricted. Required role(s): {', '.join(roles)}"}), 403
             
             return f(*args, **kwargs)
         return decorated
     return decorator
+
