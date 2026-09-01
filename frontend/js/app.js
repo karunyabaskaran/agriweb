@@ -1653,10 +1653,9 @@ const app = {
     }
   },
 
-  },
-
 
   async acceptFarmerOrder(orderId) {
+
     try {
       await api.acceptOrder(orderId);
       showToast("Order accepted successfully! Escrow funds secured.");
