@@ -1300,11 +1300,9 @@ const app = {
                   <button class="btn btn-danger btn-sm" style="flex:1;" onclick="app.deleteProduce('${item.id}')">
                     ✖ ${t("thAction", "Delete")}
                   </button>
-                  <button onclick="app.shareProduce('${item.id}')" class="btn-whatsapp" title="${t("btnShareWhatsapp", "Share on WhatsApp")}">
-                    ${t("btnShareWhatsapp", "📱 Share")}
-                  </button>
                 </div>
               </div>
+
             `;
           })
           .join("");

@@ -113,11 +113,12 @@ def get_order_details(order_id):
 
 @order_bp.route("/<order_id>/status", methods=["PATCH"])
 @auth_required
-def update_order_status():
+def update_order_status(order_id):
     """Update order status (dispatched, delivered, cancelled)."""
     data = request.get_json() or {}
     new_status = data.get("status")
-    order = db.get_by_id("orders", order_id:=request.view_args["order_id"])
+    order = db.get_by_id("orders", order_id)
+
 
     if not order:
         return jsonify({"error": "Order not found"}), 404
