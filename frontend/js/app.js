@@ -1531,7 +1531,12 @@ const app = {
                   <span class="timeline-step ${isStep4 ? "completed" : ""}">${t("stepDelivered", "4. Delivered")}</span>
                 </div>
               </td>
-              <td>${actionHtml}</td>
+              <td>
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                  ${actionHtml}
+                  ${o.status !== "rejected" ? `<button class="btn btn-outline btn-sm" onclick="app.openOrderTrackingModal('${o.id}')">📍 Track Location</button>` : ""}
+                </div>
+              </td>
             </tr>
           `;
         })
@@ -1540,6 +1545,73 @@ const app = {
       ordersBody.innerHTML = `<tr><td colspan="8" style="color:var(--text-dim);">Error: ${e.message}</td></tr>`;
     }
   },
+
+  async openOrderTrackingModal(orderId) {
+    const content = document.getElementById("trackingContent");
+    if (!content) return;
+    this.openModal("trackingModal");
+
+    content.innerHTML = `
+      <div style="text-align:center; padding:30px; color:var(--text-dim);">
+        <div class="spinner" style="margin:0 auto 10px;"></div>
+        Fetching live GPS location coordinates...
+      </div>
+    `;
+
+    try {
+      const info = await api.getOrderTracking(orderId);
+      const isDelivered = info.status === "delivered";
+      const isDispatched = info.status === "dispatched";
+
+      content.innerHTML = `
+        <div style="background:var(--bg-dark); padding:16px; border-radius:10px; border:1px solid var(--border-light); margin-bottom:16px;">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:14px;">
+            <div>
+              <span style="font-size:0.8rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px;">🌾 Farmer Location</span>
+              <div style="font-weight:700; font-size:1.05rem; margin-top:2px;">${info.farmerLocation.name}</div>
+              <code style="font-size:0.8rem; opacity:0.8;">GPS: ${info.farmerLocation.lat}, ${info.farmerLocation.lng}</code>
+            </div>
+            <div>
+              <span style="font-size:0.8rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px;">🛒 Buyer Location</span>
+              <div style="font-weight:700; font-size:1.05rem; margin-top:2px;">${info.buyerLocation.name}</div>
+              <code style="font-size:0.8rem; opacity:0.8;">GPS: ${info.buyerLocation.lat}, ${info.buyerLocation.lng}</code>
+            </div>
+          </div>
+
+          <div style="background:var(--bg-card); padding:14px; border-radius:8px; border:1px solid var(--border-light);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <div>
+                <strong style="font-size:0.95rem;">🚚 Live Transit Vehicle Position</strong>
+                <span class="user-role-badge" style="margin-left:8px; background:${isDispatched ? '#3182CE' : (isDelivered ? 'var(--success)' : '#D69E2E')};">
+                  ${info.vehicleLocation.status}
+                </span>
+              </div>
+              <div style="font-weight:800; font-size:1.1rem; color:var(--primary);">
+                ${isDelivered ? 'Arrived' : `ETA: ~${info.etaMinutes} mins`}
+              </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div style="width:100%; background:var(--bg-dark); height:10px; border-radius:5px; overflow:hidden; margin:10px 0;">
+              <div style="width:${info.progressPercent}%; background:linear-gradient(90deg, #3182CE, var(--success)); height:100%; transition:width 0.5s ease;"></div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:var(--text-dim);">
+              <span>Transit Progress: <strong>${info.progressPercent}%</strong></span>
+              <span>Distance Remaining: <strong>${info.distanceRemainingKm} km</strong> (Total ${info.totalDistanceKm} km)</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="text-align:right;">
+          <button class="btn btn-outline btn-sm" onclick="app.closeModal('trackingModal')">Close Tracker</button>
+        </div>
+      `;
+    } catch (e) {
+      content.innerHTML = `<div style="color:var(--danger); padding:20px;">Failed to load location tracking: ${e.message}</div>`;
+    }
+  },
+
 
   async updateOrderStatus(orderId, status) {
     try {

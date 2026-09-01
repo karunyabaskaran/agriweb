@@ -80,6 +80,8 @@ const api = {
   getMapConfig: () => apiRequest("/maps/config"),
   getMapNodes: () => apiRequest("/maps/nodes"),
   calculateRoute: (payload) => apiRequest("/maps/route", { method: "POST", body: payload }),
+  getOrderTracking: (orderId) => apiRequest(`/orders/${orderId}/tracking`, { auth: true }),
+
 
   // Escrow Payments
   createPaymentOrder: (payload) => apiRequest("/payments/create-order", { method: "POST", body: payload, auth: true }),
