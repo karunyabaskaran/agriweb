@@ -1603,83 +1603,116 @@ const app = {
     if (role === "admin") document.getElementById("roleChoiceAdmin")?.classList.add("selected");
   },
 
-  toggleAuthMode() {
+  setAuthTab(mode) {
     const regFields = document.getElementById("authRegisterFields");
+    const confirmGrp = document.getElementById("authConfirmPasswordGroup");
     const title = document.getElementById("authTitle");
+    const desc = document.getElementById("authDesc");
     const submitBtn = document.getElementById("authSubmitBtn");
     const toggleLink = document.getElementById("authToggleLink");
     const toggleText = document.getElementById("authToggleText");
+    const tabSignIn = document.getElementById("tabSignInBtn");
+    const tabRegister = document.getElementById("tabRegisterBtn");
 
-    if (regFields.style.display === "none") {
-      // Switch to Register Mode
-      regFields.style.display = "block";
-      title.textContent = "Register on AGRIWEB";
-      submitBtn.textContent = "Create Account";
-      toggleText.textContent = "Already have an account?";
-      toggleLink.textContent = "Login here";
+    if (mode === "register") {
+      if (regFields) regFields.style.display = "block";
+      if (confirmGrp) confirmGrp.style.display = "block";
+      if (title) title.textContent = "Create an AGRIWEB Account";
+      if (desc) desc.textContent = "Register your profile to access direct farm trading & escrow network.";
+      if (submitBtn) submitBtn.textContent = "Create Account & Sign In";
+      if (toggleText) toggleText.textContent = "Already registered?";
+      if (toggleLink) toggleLink.textContent = "Sign In here";
+      if (tabSignIn) tabSignIn.classList.remove("active");
+      if (tabRegister) tabRegister.classList.add("active");
     } else {
-      // Switch to Login Mode
-      regFields.style.display = "none";
-      title.textContent = "Sign In to AGRIWEB";
-      submitBtn.textContent = "Sign In";
-      toggleText.textContent = "Don't have an account?";
-      toggleLink.textContent = "Register Now";
+      if (regFields) regFields.style.display = "none";
+      if (confirmGrp) confirmGrp.style.display = "none";
+      if (title) title.textContent = "Sign In to AGRIWEB";
+      if (desc) desc.textContent = "Select your account role and enter your registered mobile number.";
+      if (submitBtn) submitBtn.textContent = "Sign In to Account";
+      if (toggleText) toggleText.textContent = "Don't have an account?";
+      if (toggleLink) toggleLink.textContent = "Create one now";
+      if (tabSignIn) tabSignIn.classList.add("active");
+      if (tabRegister) tabRegister.classList.remove("active");
     }
   },
 
-  fillDemoAuth(phone, role) {
+  toggleAuthMode() {
     const regFields = document.getElementById("authRegisterFields");
-    if (regFields && regFields.style.display !== "none") {
-      this.toggleAuthMode();
-    }
-
-    this.selectAuthRole(role);
-    
-    const phoneInput = document.getElementById("authPhone");
-    const passwordInput = document.getElementById("authPassword");
-    
-    if (phoneInput) phoneInput.value = phone;
-    if (passwordInput) passwordInput.value = "password123";
-
-    const form = document.getElementById("authMainForm");
-    if (form) {
-      const event = new Event('submit', { cancelable: true });
-      form.dispatchEvent(event);
-    }
+    const isLogin = !regFields || regFields.style.display === "none";
+    this.setAuthTab(isLogin ? "register" : "login");
   },
 
   async handleAuthSubmit(e) {
     e.preventDefault();
-    const isRegister = document.getElementById("authRegisterFields").style.display !== "none";
-    const phone = document.getElementById("authPhone").value;
-    const password = document.getElementById("authPassword").value;
+    const isRegister = document.getElementById("authRegisterFields")?.style.display !== "none";
+    const phoneInput = document.getElementById("authPhone");
+    const passwordInput = document.getElementById("authPassword");
+    const submitBtn = document.getElementById("authSubmitBtn");
+
+    const phone = phoneInput ? phoneInput.value.trim() : "";
+    const password = passwordInput ? passwordInput.value : "";
+
+    if (!phone || phone.length !== 10 || !/^\d{10}$/.test(phone)) {
+      showToast("Please enter a valid 10-digit mobile number.", "error");
+      if (phoneInput) phoneInput.focus();
+      return;
+    }
+
+    if (!password || password.length < 6) {
+      showToast("Password must be at least 6 characters long.", "error");
+      if (passwordInput) passwordInput.focus();
+      return;
+    }
+
+    const origBtnText = submitBtn ? submitBtn.textContent : "Submit";
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = isRegister ? "Creating Account..." : "Signing In...";
+    }
 
     try {
       if (isRegister) {
-        const name = document.getElementById("authName").value;
-        const village = document.getElementById("authVillage").value || "Nashik";
-        const state = document.getElementById("authState").value || "Maharashtra";
-        
+        const name = document.getElementById("authName")?.value.trim();
+        const village = document.getElementById("authVillage")?.value.trim() || "Local Hub";
+        const state = document.getElementById("authState")?.value.trim() || "India";
+        const confirmPassword = document.getElementById("authConfirmPassword")?.value;
+
         if (!name) {
-          showToast("Please enter your full name", "error");
+          showToast("Please enter your full name or enterprise name.", "error");
+          document.getElementById("authName")?.focus();
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origBtnText; }
           return;
         }
 
-        await auth.register({
+        if (confirmPassword !== undefined && password !== confirmPassword) {
+          showToast("Passwords do not match. Please re-check.", "error");
+          document.getElementById("authConfirmPassword")?.focus();
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origBtnText; }
+          return;
+        }
+
+        const user = await auth.register({
           name,
           phone,
           password,
-          role: this.authRole,
+          role: this.authRole || "farmer",
           village,
           state
         });
-        showToast("Account created successfully!");
+
+        showToast(`🎉 Welcome to AGRIWEB, ${user.name}! Your account is created.`);
       } else {
-        await auth.login(phone, password);
-        showToast("Welcome back!");
+        const user = await auth.login(phone, password);
+        showToast(`Welcome back, ${user.name}!`);
       }
     } catch (err) {
-      showToast(err.message, "error");
+      showToast(err.message || "Authentication failed. Please check your credentials.", "error");
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = origBtnText;
+      }
     }
   },
 

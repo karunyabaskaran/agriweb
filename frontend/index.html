@@ -137,77 +137,73 @@
 
         <!-- Right Auth Form -->
         <div class="auth-wrapper">
+          <!-- Auth Navigation Tabs -->
+          <div class="auth-tabs">
+            <button type="button" id="tabSignInBtn" class="auth-tab-btn active" onclick="app.setAuthTab('login')">
+              Sign In
+            </button>
+            <button type="button" id="tabRegisterBtn" class="auth-tab-btn" onclick="app.setAuthTab('register')">
+              Create Account
+            </button>
+          </div>
+
           <div class="auth-header">
             <h2 id="authTitle" class="auth-title" data-i18n="authTitle">Sign In to AGRIWEB</h2>
-            <p id="authDesc" class="auth-desc" data-i18n="authDesc">Choose your role and enter your credentials to access your dashboard.</p>
+            <p id="authDesc" class="auth-desc" data-i18n="authDesc">Select your account role and enter your registered mobile number.</p>
           </div>
 
           <!-- Role Selector -->
-          <div class="role-selector-grid">
-            <div id="roleChoiceFarmer" class="role-choice-btn selected" onclick="app.selectAuthRole('farmer')">
-              <div class="role-choice-icon">👨‍🌾</div>
-              <div class="role-choice-name" data-i18n="roleFarmer">Farmer</div>
-            </div>
-            <div id="roleChoiceBuyer" class="role-choice-btn" onclick="app.selectAuthRole('buyer')">
-              <div class="role-choice-icon">🛒</div>
-              <div class="role-choice-name" data-i18n="roleConsumer">Direct Buyer</div>
-            </div>
-            <div id="roleChoiceAdmin" class="role-choice-btn" onclick="app.selectAuthRole('admin')">
-              <div class="role-choice-icon">🏛️</div>
-              <div class="role-choice-name" data-i18n="roleAdmin">Admin</div>
-            </div>
-          </div>
-
-          <!-- Quick Test Demo Accounts -->
-          <div style="background: rgba(255,255,255,0.03); border: 1px dashed var(--border-light); border-radius: 12px; padding: 12px; margin-bottom: 20px;">
-            <div style="font-weight: 700; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing:0.5px;" data-i18n="quickDemo">
-              ⚡ Quick Test Logins (Password: password123)
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 6px;">
-              <button type="button" class="btn btn-outline btn-sm" onclick="app.fillDemoAuth('9876543210', 'farmer')"
-                style="justify-content: space-between; padding: 6px 12px; font-size: 0.83rem; width: 100%;">
-                <span>👨‍🌾 Farmer: Ramesh Kumar</span>
-                <span style="font-size:0.78rem; opacity:0.7;">9876543210</span>
-              </button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="app.fillDemoAuth('9123456780', 'buyer')"
-                style="justify-content: space-between; padding: 6px 12px; font-size: 0.83rem; width: 100%;">
-                <span>🛒 Direct Buyer: FreshMart</span>
-                <span style="font-size:0.78rem; opacity:0.7;">9123456780</span>
-              </button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="app.fillDemoAuth('9998887770', 'admin')"
-                style="justify-content: space-between; padding: 6px 12px; font-size: 0.83rem; width: 100%;">
-                <span>🏛️ Ministry Officer: Admin</span>
-                <span style="font-size:0.78rem; opacity:0.7;">9998887770</span>
-              </button>
+          <div class="form-group" style="margin-bottom: 18px;">
+            <label class="form-label" style="font-weight:700; font-size:0.83rem; text-transform:uppercase; color:var(--text-muted);">Account Persona / Role</label>
+            <div class="role-selector-grid">
+              <div id="roleChoiceFarmer" class="role-choice-btn selected" onclick="app.selectAuthRole('farmer')">
+                <div class="role-choice-icon">👨‍🌾</div>
+                <div class="role-choice-name" data-i18n="roleFarmer">Farmer</div>
+              </div>
+              <div id="roleChoiceBuyer" class="role-choice-btn" onclick="app.selectAuthRole('buyer')">
+                <div class="role-choice-icon">🛒</div>
+                <div class="role-choice-name" data-i18n="roleConsumer">Direct Buyer</div>
+              </div>
+              <div id="roleChoiceAdmin" class="role-choice-btn" onclick="app.selectAuthRole('admin')">
+                <div class="role-choice-icon">🏛️</div>
+                <div class="role-choice-name" data-i18n="roleAdmin">Admin</div>
+              </div>
             </div>
           </div>
 
           <!-- Main Auth Form -->
           <form id="authMainForm" onsubmit="app.handleAuthSubmit(event)">
+            <!-- Registration-only Fields -->
             <div id="authRegisterFields" style="display:none;">
               <div class="form-group">
-                <label class="form-label" data-i18n="lblName">Full Name / Business Name</label>
+                <label class="form-label" data-i18n="lblName">Full Name / Enterprise Name *</label>
                 <input type="text" id="authName" class="form-input" placeholder="e.g. Ramesh Kumar">
               </div>
 
-              <div class="form-group">
-                <label class="form-label" data-i18n="lblVillage">Village / City Hub</label>
-                <input type="text" id="authVillage" class="form-input" placeholder="e.g. Dindori, Nashik">
-              </div>
-
-              <div class="form-group">
-                <label class="form-label" data-i18n="lblState">State</label>
-                <input type="text" id="authState" class="form-input" placeholder="e.g. Maharashtra">
+              <div class="form-grid-2">
+                <div class="form-group">
+                  <label class="form-label" data-i18n="lblVillage">Village / City Hub *</label>
+                  <input type="text" id="authVillage" class="form-input" placeholder="e.g. Dindori, Nashik">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" data-i18n="lblState">State *</label>
+                  <input type="text" id="authState" class="form-input" placeholder="e.g. Maharashtra">
+                </div>
               </div>
             </div>
 
+            <!-- Mobile Phone Input with +91 Country Badge -->
             <div class="form-group">
-              <label class="form-label" data-i18n="lblPhone">Phone Number</label>
-              <input type="tel" id="authPhone" class="form-input" placeholder="10-digit mobile number" required>
+              <label class="form-label" data-i18n="lblPhone">Registered Mobile Number *</label>
+              <div class="phone-input-wrapper">
+                <span class="country-code-badge">🇮🇳 +91</span>
+                <input type="tel" id="authPhone" class="form-input phone-input" placeholder="10-digit mobile number" maxlength="10" pattern="[0-9]{10}" required>
+              </div>
             </div>
 
+            <!-- Password Field -->
             <div class="form-group">
-              <label class="form-label" data-i18n="lblPassword">Password</label>
+              <label class="form-label" data-i18n="lblPassword">Password *</label>
               <div class="password-input-wrapper">
                 <input type="password" id="authPassword" class="form-input" placeholder="Enter password" required>
                 <button type="button" class="password-toggle-btn" onclick="const p = document.getElementById('authPassword'); p.type = p.type === 'password' ? 'text' : 'password'; this.textContent = p.type === 'password' ? '👁️' : '🙈';">
@@ -216,16 +212,27 @@
               </div>
             </div>
 
-            <button type="submit" id="authSubmitBtn" class="btn btn-primary" style="width:100%; margin-top:10px; padding:12px; font-weight:700; font-size:0.95rem;" data-i18n="btnSignIn">
+            <!-- Confirm Password (Registration Only) -->
+            <div id="authConfirmPasswordGroup" class="form-group" style="display:none;">
+              <label class="form-label">Confirm Password *</label>
+              <input type="password" id="authConfirmPassword" class="form-input" placeholder="Re-enter password">
+            </div>
+
+            <button type="submit" id="authSubmitBtn" class="btn btn-primary" style="width:100%; margin-top:12px; padding:14px; font-weight:700; font-size:0.96rem; border-radius:12px;" data-i18n="btnSignIn">
               Sign In to Account
             </button>
           </form>
 
           <div style="text-align:center; margin-top:22px; font-size:0.9rem; color:var(--text-muted);">
             <span id="authToggleText" data-i18n="authToggleText">Don't have an account?</span>
-            <a href="javascript:void(0)" id="authToggleLink" onclick="app.toggleAuthMode()" style="font-weight:700; margin-left:4px;" data-i18n="authToggleLink">
-              Register Now
+            <a href="javascript:void(0)" id="authToggleLink" onclick="app.toggleAuthMode()" style="font-weight:700; margin-left:4px; color:#6366F1;" data-i18n="authToggleLink">
+              Create one now
             </a>
+          </div>
+
+          <div style="margin-top:24px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.06); text-align:center; font-size:0.78rem; color:var(--text-muted); display:flex; align-items:center; justify-content:center; gap:6px;">
+            <span>🔒</span>
+            <span>256-Bit Encrypted Security — AGRIWEB Direct Escrow Network</span>
           </div>
         </div>
       </div>
