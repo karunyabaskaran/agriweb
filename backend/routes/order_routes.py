@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, g
 from backend.db.firebase_db import db
 from backend.middleware.auth import auth_required, require_role
-from backend.utils.helpers import new_id, current_iso_time, compute_trust_score, calculate_haversine_distance
+from backend.utils.helpers import new_id, current_iso_time, compute_trust_score
 
 order_bp = Blueprint("orders", __name__, url_prefix="/api/orders")
 
@@ -43,8 +43,7 @@ def create_order():
         transaction_id = f"TXN_{order_id.upper()}"
 
         origin = produce.get("coordinates") or {"lat": 19.076, "lng": 72.877, "name": produce.get("village", "Farm Village")}
-        dest = data.get("deliveryDestination") or buyer.get("coordinates") or {"lat": 19.033, "lng": 73.029, "name": buyer.get("village", "Buyer Hub")}
-
+        dest = buyer.get("coordinates") or {"lat": 19.033, "lng": 73.029, "name": buyer.get("village", "Buyer Hub")}
 
         order = {
             "id": order_id,
@@ -60,9 +59,8 @@ def create_order():
             "quantityKg": req_qty,
             "pricePerKg": unit_price,
             "totalPrice": total_price,
-            "status": "pending", # pending -> confirmed/rejected -> dispatched -> delivered -> rated
-            "paymentStatus": "escrow_pending", # escrow_pending -> held_in_escrow -> released_to_farmer
-
+            "status": "confirmed", # confirmed -> dispatched -> delivered -> rated
+            "paymentStatus": "held_in_escrow", # held_in_escrow -> released_to_farmer
             "transactionId": transaction_id,
             "deliveryOrigin": origin,
             "deliveryDestination": dest,
@@ -161,58 +159,14 @@ def update_order_status(order_id):
             if role not in ["buyer", "farmer"]:
                 return jsonify({"error": "Not authorized to update this order"}), 403
 
-        valid_statuses = ["pending", "confirmed", "rejected", "dispatched", "delivered", "cancelled"]
+        valid_statuses = ["confirmed", "dispatched", "delivered", "cancelled"]
         if new_status not in valid_statuses:
             return jsonify({"error": f"Invalid status. Must be one of: {', '.join(valid_statuses)}"}), 400
 
         updates = {"status": new_status}
 
-        # If farmer accepts order (confirmed)
-        if new_status == "confirmed":
-            updates["paymentStatus"] = "held_in_escrow"
-            try:
-                payments = db.get_all("payments") or []
-                for p in payments:
-                    if isinstance(p, dict) and str(p.get("orderId", "")) in [clean_order_id, str(order_id)]:
-                        db.update("payments", p.get("id"), {
-                            "escrowStatus": "held_in_escrow",
-                            "status": "escrow_secured"
-                        })
-            except Exception as pe:
-                print(f"Warning updating payment record: {pe}")
-
-        # If farmer rejects order (rejected)
-        elif new_status == "rejected":
-            updates["paymentStatus"] = "refunded_to_buyer"
-            try:
-                payments = db.get_all("payments") or []
-                for p in payments:
-                    if isinstance(p, dict) and str(p.get("orderId", "")) in [clean_order_id, str(order_id)]:
-                        db.update("payments", p.get("id"), {
-                            "escrowStatus": "refunded_to_buyer",
-                            "status": "refunded"
-                        })
-            except Exception as pe:
-                print(f"Warning updating payment record: {pe}")
-
-            # Restore produce quantity to listing
-            try:
-                produce_id = order.get("produceId")
-                if produce_id:
-                    produce = db.get_by_id("produce", produce_id)
-                    if produce:
-                        current_qty = float(produce.get("quantityKg", 0))
-                        req_qty = float(order.get("quantityKg", 0))
-                        new_qty = current_qty + req_qty
-                        db.update("produce", produce_id, {
-                            "quantityKg": new_qty,
-                            "status": "listed"
-                        })
-            except Exception as re:
-                print(f"Warning restoring produce quantity: {re}")
-
         # If delivered, automatically release escrow funds to the farmer
-        elif new_status == "delivered":
+        if new_status == "delivered":
             updates["paymentStatus"] = "escrow_released"
             try:
                 payments = db.get_all("payments") or []
@@ -281,109 +235,3 @@ def rate_order(order_id):
         "order": updated_order,
         "newTrustScore": farmer.get("trustScore") if farmer else 4.8
     }), 200
-
-
-@order_bp.route("/<order_id>/tracking", methods=["GET"])
-@auth_required
-def get_order_tracking(order_id):
-    """
-    Geodesic Transit Tracking Engine:
-    Calculates live GPS coordinates for farmer origin, buyer destination,
-    and transit vehicle interpolated position along the route.
-    """
-    try:
-        clean_order_id = str(order_id).replace("#", "").strip()
-        order = db.get_by_id("orders", clean_order_id)
-        if not order:
-            all_orders = db.get_all("orders") or []
-            order = next((o for o in all_orders if isinstance(o, dict) and (o.get("id") == clean_order_id or str(o.get("id")) == str(order_id))), None)
-
-        if not order:
-            return jsonify({"error": "Order not found"}), 404
-
-        user_id = str(g.user.get("id", "")).strip()
-        user_name = str(g.user.get("name", "")).strip().lower()
-        user_phone = str(g.user.get("phone", "")).strip()
-        role = str(g.user.get("role", "")).strip().lower()
-
-        # Authorization check: buyer of order, farmer of order, or admin
-        is_buyer = (
-            user_id == str(order.get("buyerId", "")) or
-            user_name == str(order.get("buyerName", "")).lower() or
-            (user_phone and user_phone == str(order.get("buyerPhone", "")))
-        )
-        is_farmer = (
-            user_id == str(order.get("farmerId", "")) or
-            user_name == str(order.get("farmerName", "")).lower() or
-            (user_phone and user_phone == str(order.get("farmerPhone", "")))
-        )
-
-        if role != "admin" and not is_buyer and not is_farmer:
-            if role not in ["buyer", "farmer"]:
-                return jsonify({"error": "Not authorized to track this order"}), 403
-
-        # Default coordinates fallback if missing in order record
-        farmer_loc = order.get("deliveryOrigin") or {"lat": 19.9975, "lng": 73.7898, "name": f"Farmer ({order.get('farmerName', 'Farm Origin')})"}
-        buyer_loc = order.get("deliveryDestination") or {"lat": 19.0330, "lng": 73.0290, "name": f"Buyer ({order.get('buyerName', 'Delivery Hub')})"}
-
-        # Calculate Haversine Geodesic Distance
-        f_lat, f_lng = float(farmer_loc.get("lat", 19.9975)), float(farmer_loc.get("lng", 73.7898))
-        b_lat, b_lng = float(buyer_loc.get("lat", 19.0330)), float(buyer_loc.get("lng", 73.0290))
-        total_dist_km = calculate_haversine_distance(f_lat, f_lng, b_lat, b_lng)
-
-        status = order.get("status", "pending")
-        progress = 0.0
-
-        if status == "pending":
-            progress = 0.05
-        elif status in ["confirmed", "accepted"]:
-            progress = 0.25
-        elif status == "dispatched":
-            progress = 0.70
-        elif status in ["delivered", "rated"]:
-            progress = 1.0
-        elif status == "rejected":
-            progress = 0.0
-
-        # Calculate current vehicle GPS position via linear interpolation
-        curr_lat = round(f_lat + (b_lat - f_lat) * progress, 5)
-        curr_lng = round(f_lng + (b_lng - f_lng) * progress, 5)
-
-        remaining_dist_km = round(total_dist_km * (1.0 - progress), 2)
-        avg_speed_kmh = 42.0
-        eta_minutes = int((remaining_dist_km / avg_speed_kmh) * 60) if remaining_dist_km > 0 else 0
-
-        tracking_info = {
-            "orderId": order.get("id"),
-            "status": status,
-            "commodity": order.get("commodity"),
-            "quantityKg": order.get("quantityKg"),
-            "farmerName": order.get("farmerName"),
-            "buyerName": order.get("buyerName"),
-            "farmerLocation": {
-                "lat": f_lat,
-                "lng": f_lng,
-                "name": farmer_loc.get("name") or order.get("farmerName") or "Farm Origin"
-            },
-            "buyerLocation": {
-                "lat": b_lat,
-                "lng": b_lng,
-                "name": buyer_loc.get("name") or order.get("buyerName") or "Buyer Hub"
-            },
-            "vehicleLocation": {
-                "lat": curr_lat,
-                "lng": curr_lng,
-                "status": "In Transit" if status == "dispatched" else ("Delivered" if status == "delivered" else "Preparing")
-            },
-            "progressPercent": int(progress * 100),
-            "totalDistanceKm": total_dist_km,
-            "distanceRemainingKm": remaining_dist_km,
-            "etaMinutes": eta_minutes,
-            "speedKmh": avg_speed_kmh if status == "dispatched" else 0
-        }
-
-        return jsonify(tracking_info), 200
-    except Exception as e:
-        print(f"Error fetching order tracking: {e}")
-        return jsonify({"error": f"Failed to fetch order tracking: {str(e)}"}), 500
-

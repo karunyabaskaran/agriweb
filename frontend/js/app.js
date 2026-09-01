@@ -855,13 +855,8 @@ const app = {
       case "prices":
         this.loadPriceRadar();
         break;
-      case "admin":
-        this.loadAdminFarmerLedger();
-        this.loadAdminSupportDesk();
-        break;
     }
   },
-
 
   // ----------------------------------------------------
   // Marketplace & Products Browsing
@@ -1376,53 +1371,7 @@ const app = {
     if (grandEl) grandEl.textContent = `₹${grandTotal.toFixed(2)}`;
   },
 
-  // HTML5 Hardware Geolocation Device GPS Detection
-  fetchDeviceGPS(role = "farmer") {
-    const statusEl = document.getElementById(role === "farmer" ? "farmerGpsStatus" : "buyerGpsStatus");
-    if (!navigator.geolocation) {
-      showToast("Geolocation is not supported by your device browser.", "error");
-      return;
-    }
-
-    if (statusEl) statusEl.innerHTML = "⏳ Accessing device hardware GPS...";
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = parseFloat(position.coords.latitude.toFixed(6));
-        const lng = parseFloat(position.coords.longitude.toFixed(6));
-
-        if (role === "farmer") {
-          this.farmerCoordinates = { lat, lng, name: `Farmer Device GPS (${lat}, ${lng})` };
-          const villageInput = document.getElementById("postVillage");
-          if (villageInput && !villageInput.value) {
-            villageInput.value = `GPS (${lat}, ${lng})`;
-          }
-          if (statusEl) statusEl.innerHTML = `✅ Device GPS Acquired: <code>${lat}, ${lng}</code>`;
-        } else {
-          this.buyerCoordinates = { lat, lng, name: `Buyer Device GPS (${lat}, ${lng})` };
-          if (statusEl) statusEl.innerHTML = `✅ Device GPS Acquired: <code>${lat}, ${lng}</code>`;
-        }
-
-        showToast(`📍 Device Hardware GPS Acquired: ${lat}, ${lng}`, "success");
-      },
-      (error) => {
-        let msg = "Could not retrieve GPS location.";
-        if (error.code === error.PERMISSION_DENIED) {
-          msg = "GPS Permission denied. Please allow location access in browser settings.";
-        } else if (error.code === error.POSITION_UNAVAILABLE) {
-          msg = "GPS Hardware position unavailable.";
-        } else if (error.code === error.TIMEOUT) {
-          msg = "GPS location request timed out.";
-        }
-        if (statusEl) statusEl.innerHTML = `<span style="color:var(--danger)">⚠️ ${msg}</span>`;
-        showToast(msg, "error");
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
-  },
-
   async confirmOrder() {
-
     if (!this.selectedProduceForOrder) return;
 
     const qty = parseFloat(document.getElementById("orderQtyInput")?.value || "0");
@@ -1438,8 +1387,7 @@ const app = {
       const res = await api.createOrder({
         produceId: this.selectedProduceForOrder.id,
         quantityKg: qty,
-        paymentMethod: "UPI / Escrow Guaranteed",
-        deliveryDestination: this.buyerCoordinates || null
+        paymentMethod: "UPI / Escrow Guaranteed"
       });
 
       this.closeModal("orderModal");
@@ -1456,7 +1404,6 @@ const app = {
     }
   },
 
-
   // ----------------------------------------------------
   // Orders & Payment Escrow Ledger
   // ----------------------------------------------------
@@ -1470,97 +1417,24 @@ const app = {
       const myOrders = await api.getMyOrders();
       this.allOrders = myOrders || [];
 
-      const isFarmer = auth.getRole() === "farmer";
-      const pendingOrders = this.allOrders.filter((o) => o.status === "pending");
-
-      // Render Farmer Notification Banner if pending orders exist
-      const container = document.getElementById("ordersNotificationContainer");
-      if (container) {
-        if (isFarmer && pendingOrders.length > 0) {
-          container.innerHTML = `
-            <div class="farmer-notification-banner" style="background:#FEFCBF; border:1px solid #ECC94B; color:#744210; padding:14px 18px; border-radius:10px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
-              <div style="display:flex; align-items:center; gap:10px;">
-                <span style="font-size:1.5rem;">🔔</span>
-                <div>
-                  <strong style="font-size:1.05rem;">New Order Notification!</strong>
-                  <div style="font-size:0.9rem; opacity:0.9;">You have <strong>${pendingOrders.length} pending order(s)</strong> awaiting your acceptance/rejection below.</div>
-                </div>
-              </div>
-              <span class="grade-badge" style="background:#D69E2E; color:white; font-weight:800; font-size:0.85rem; padding:4px 10px;">Action Required</span>
-            </div>
-          `;
-        } else {
-          container.innerHTML = "";
-        }
-      }
-
       if (this.allOrders.length === 0) {
-        ordersBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-dim); padding:30px;">No direct orders found. Browse Marketplace to order fresh products!</td></tr>`;
+        ordersBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-dim); padding:30px;">No direct orders placed yet. Browse Marketplace to order fresh products!</td></tr>`;
         return;
       }
 
       ordersBody.innerHTML = this.allOrders
         .map((o) => {
+          const isFarmer = auth.getRole() === "farmer";
+          const canConfirmDelivery = !isFarmer && (o.status === "confirmed" || o.status === "dispatched");
+          const canRate = !isFarmer && o.status === "delivered";
+
           let statusText = "Safe Escrow Secured";
-          let statusBg = "#4A5568";
+          if (o.paymentStatus === "escrow_released") statusText = "Funds Released to Farmer";
 
-          if (o.status === "pending") {
-            statusText = "⏳ Pending Farmer Approval";
-            statusBg = "#D69E2E";
-          } else if (o.status === "rejected") {
-            statusText = "❌ Rejected & Refunded";
-            statusBg = "#E53E3E";
-          } else if (o.status === "confirmed") {
-            statusText = "✅ Accepted & Escrow Secured";
-            statusBg = "#319795";
-          } else if (o.status === "dispatched") {
-            statusText = "🚚 In Transit / Dispatched";
-            statusBg = "#3182CE";
-          } else if (o.paymentStatus === "escrow_released" || o.status === "delivered") {
-            statusText = "🎉 Delivered & Funds Released";
-            statusBg = "var(--success)";
-          }
-
-          // Timeline steps
-          const isStep1 = true; // Placed
-          const isStep2 = o.status === "confirmed" || o.status === "dispatched" || o.status === "delivered";
-          const isStep3 = o.status === "dispatched" || o.status === "delivered";
-          const isStep4 = o.status === "delivered";
-
-          let actionHtml = "";
-          if (isFarmer) {
-            if (o.status === "pending") {
-              actionHtml = `
-                <div style="display:flex; gap:6px;">
-                  <button class="btn btn-primary btn-sm" style="background:var(--success); border-color:var(--success);" onclick="app.updateOrderStatus('${o.id}', 'confirmed')">✔ Accept</button>
-                  <button class="btn btn-danger btn-sm" onclick="app.updateOrderStatus('${o.id}', 'rejected')">✖ Reject</button>
-                </div>
-              `;
-            } else if (o.status === "confirmed") {
-              actionHtml = `<button class="btn btn-primary btn-sm" onclick="app.updateOrderStatus('${o.id}', 'dispatched')">🚚 Dispatch Order</button>`;
-            } else if (o.status === "rejected") {
-              actionHtml = `<span style="font-size:0.85rem; color:var(--danger); font-weight:700;">Order Rejected</span>`;
-            } else if (o.status === "dispatched") {
-              actionHtml = `<span style="font-size:0.85rem; color:#3182CE; font-weight:700;">🚚 In Transit</span>`;
-            } else {
-              actionHtml = `<span style="font-size:0.85rem; color:var(--success); font-weight:700;">Completed</span>`;
-            }
-          } else {
-            // Buyer view
-            if (o.status === "pending") {
-              actionHtml = `<span style="font-size:0.85rem; color:#D69E2E; font-weight:700;">⏳ Awaiting Farmer</span>`;
-            } else if (o.status === "rejected") {
-              actionHtml = `<span style="font-size:0.85rem; color:var(--danger); font-weight:700;">💳 Refunded</span>`;
-            } else if (o.status === "confirmed" || o.status === "dispatched") {
-              actionHtml = `<button class="btn btn-primary btn-sm" onclick="app.updateOrderStatus('${o.id}', 'delivered')">✔ Confirm Received</button>`;
-            } else if (o.status === "delivered") {
-              actionHtml = o.rating
-                ? `<span style="font-size:0.88rem; color:var(--text-dim); font-weight:700;">Completed (⭐ ${o.rating}/5)</span>`
-                : `<button class="btn btn-outline btn-sm" onclick="app.openRatingModal('${o.id}')">⭐ Rate Quality</button>`;
-            } else {
-              actionHtml = `<span style="font-size:0.88rem; color:var(--text-dim); font-weight:700;">Completed</span>`;
-            }
-          }
+          // Stepper calculation (Suggestion C)
+          const isStep1 = true;
+          const isStep2 = o.status === "dispatched" || o.status === "delivered";
+          const isStep3 = o.status === "delivered";
 
           return `
             <tr>
@@ -1571,24 +1445,25 @@ const app = {
               <td>${o.quantityKg} kg</td>
               <td style="font-weight:700;">₹${o.totalPrice}</td>
               <td>
-                <span class="user-role-badge" style="background:${statusBg}; color:white;">
+                <span class="user-role-badge" style="background:${o.paymentStatus === "escrow_released" ? "var(--success)" : "#4A5568"}">
                   ${statusText}
                 </span>
                 <div class="order-timeline">
-                  <span class="timeline-step ${isStep1 ? "active" : ""}">${t("stepPlaced", "1. Placed")}</span>
+                  <span class="timeline-step ${isStep1 ? (isStep2 ? "completed" : "active") : ""}">${t("stepPlaced", "1. Placed")}</span>
                   <span class="timeline-arrow">➔</span>
-                  <span class="timeline-step ${isStep2 ? (isStep3 ? "completed" : "active") : (o.status === "rejected" ? "rejected" : "")}">${o.status === "rejected" ? "2. Rejected" : "2. Accepted"}</span>
+                  <span class="timeline-step ${isStep2 ? (isStep3 ? "completed" : "active") : ""}">${t("stepDispatched", "2. Dispatched")}</span>
                   <span class="timeline-arrow">➔</span>
-                  <span class="timeline-step ${isStep3 ? (isStep4 ? "completed" : "active") : ""}">${t("stepDispatched", "3. Dispatched")}</span>
-                  <span class="timeline-arrow">➔</span>
-                  <span class="timeline-step ${isStep4 ? "completed" : ""}">${t("stepDelivered", "4. Delivered")}</span>
+                  <span class="timeline-step ${isStep3 ? "completed" : ""}">${t("stepDelivered", "3. Delivered")}</span>
                 </div>
               </td>
               <td>
-                <div style="display:flex; flex-direction:column; gap:6px;">
-                  ${actionHtml}
-                  ${o.status !== "rejected" ? `<button class="btn btn-outline btn-sm" onclick="app.openOrderTrackingModal('${o.id}')">📍 Track Location</button>` : ""}
-                </div>
+                ${
+                  canConfirmDelivery
+                    ? `<button class="btn btn-primary btn-sm" onclick="app.updateOrderStatus('${o.id}', 'delivered')">✔ Confirm Received</button>`
+                    : canRate
+                    ? `<button class="btn btn-outline btn-sm" onclick="app.openRatingModal('${o.id}')">⭐ Rate Quality</button>`
+                    : `<span style="font-size:0.88rem; color:var(--text-dim); font-weight:700;">Completed ${o.rating ? `(⭐ ${o.rating}/5)` : ""}</span>`
+                }
               </td>
             </tr>
           `;
@@ -1599,94 +1474,16 @@ const app = {
     }
   },
 
-  async openOrderTrackingModal(orderId) {
-    const content = document.getElementById("trackingContent");
-    if (!content) return;
-    this.openModal("trackingModal");
-
-    content.innerHTML = `
-      <div style="text-align:center; padding:30px; color:var(--text-dim);">
-        <div class="spinner" style="margin:0 auto 10px;"></div>
-        Fetching live GPS location coordinates...
-      </div>
-    `;
-
-    try {
-      const info = await api.getOrderTracking(orderId);
-      const isDelivered = info.status === "delivered";
-      const isDispatched = info.status === "dispatched";
-
-      content.innerHTML = `
-        <div style="background:var(--bg-dark); padding:16px; border-radius:10px; border:1px solid var(--border-light); margin-bottom:16px;">
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:14px;">
-            <div>
-              <span style="font-size:0.8rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px;">🌾 Farmer Location</span>
-              <div style="font-weight:700; font-size:1.05rem; margin-top:2px;">${info.farmerLocation.name}</div>
-              <code style="font-size:0.8rem; opacity:0.8;">GPS: ${info.farmerLocation.lat}, ${info.farmerLocation.lng}</code>
-            </div>
-            <div>
-              <span style="font-size:0.8rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px;">🛒 Buyer Location</span>
-              <div style="font-weight:700; font-size:1.05rem; margin-top:2px;">${info.buyerLocation.name}</div>
-              <code style="font-size:0.8rem; opacity:0.8;">GPS: ${info.buyerLocation.lat}, ${info.buyerLocation.lng}</code>
-            </div>
-          </div>
-
-          <div style="background:var(--bg-card); padding:14px; border-radius:8px; border:1px solid var(--border-light);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <div>
-                <strong style="font-size:0.95rem;">🚚 Live Transit Vehicle Position</strong>
-                <span class="user-role-badge" style="margin-left:8px; background:${isDispatched ? '#3182CE' : (isDelivered ? 'var(--success)' : '#D69E2E')};">
-                  ${info.vehicleLocation.status}
-                </span>
-              </div>
-              <div style="font-weight:800; font-size:1.1rem; color:var(--primary);">
-                ${isDelivered ? 'Arrived' : `ETA: ~${info.etaMinutes} mins`}
-              </div>
-            </div>
-
-            <!-- Progress Bar -->
-            <div style="width:100%; background:var(--bg-dark); height:10px; border-radius:5px; overflow:hidden; margin:10px 0;">
-              <div style="width:${info.progressPercent}%; background:linear-gradient(90deg, #3182CE, var(--success)); height:100%; transition:width 0.5s ease;"></div>
-            </div>
-
-            <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:var(--text-dim);">
-              <span>Transit Progress: <strong>${info.progressPercent}%</strong></span>
-              <span>Distance Remaining: <strong>${info.distanceRemainingKm} km</strong> (Total ${info.totalDistanceKm} km)</span>
-            </div>
-          </div>
-        </div>
-
-        <div style="text-align:right;">
-          <button class="btn btn-outline btn-sm" onclick="app.closeModal('trackingModal')">Close Tracker</button>
-        </div>
-      `;
-    } catch (e) {
-      content.innerHTML = `<div style="color:var(--danger); padding:20px;">Failed to load location tracking: ${e.message}</div>`;
-    }
-  },
-
-
   async updateOrderStatus(orderId, status) {
     try {
       await api.updateOrderStatus(orderId, status);
-      if (status === "confirmed") {
-        showToast("Order Accepted! Escrow funds secured.", "success");
-      } else if (status === "rejected") {
-        showToast("Order Rejected. Escrow funds refunded to buyer.", "info");
-      } else if (status === "delivered") {
-        showToast("Order completed! Escrow funds released to farmer.", "success");
-      } else if (status === "dispatched") {
-        showToast("Order status updated: Dispatched for Delivery.", "success");
-      } else {
-        showToast("Order status updated successfully.", "success");
-      }
+      showToast("Order completed! Escrow funds released to farmer.");
       this.loadOrdersLedger();
       if (auth.isLoggedIn()) this.renderDashboardSummary();
     } catch (e) {
       showToast(e.message, "error");
     }
   },
-
 
   openRatingModal(orderId) {
     const idInput = document.getElementById("rateOrderId");
@@ -1795,10 +1592,8 @@ const app = {
         grade,
         village,
         state,
-        imagePath: imageBase64,
-        coordinates: this.farmerCoordinates || null
+        imagePath: imageBase64
       });
-
 
       this.closeModal("createProduceModal");
       showToast("Product listed in Marketplace successfully!");
@@ -2013,183 +1808,7 @@ const app = {
     } catch (e) {
       showToast("Failed to set price cap.", "error");
     }
-  },
-
-  // ----------------------------------------------------
-  // Floating Support Chatbot & Ministry Desk
-  // ----------------------------------------------------
-  toggleSupportChat() {
-    const box = document.getElementById("supportChatBox");
-    if (!box) return;
-    box.style.display = box.style.display === "flex" ? "none" : "flex";
-  },
-
-  async sendSupportMessage() {
-    const input = document.getElementById("chatInputMsg");
-    const stream = document.getElementById("chatMessagesStream");
-    if (!input || !stream) return;
-
-    const userText = input.value.trim();
-    if (!userText) return;
-
-    // Render user message
-    stream.innerHTML += `
-      <div style="background:var(--primary); color:white; padding:10px 14px; border-radius:10px; align-self:flex-end; max-width:85%;">
-        ${userText}
-      </div>
-    `;
-    input.value = "";
-    stream.scrollTop = stream.scrollHeight;
-
-    try {
-      const res = await api.sendSupportChat(userText);
-      stream.innerHTML += `
-        <div style="background:var(--bg-dark); padding:10px 14px; border-radius:10px; align-self:flex-start; max-width:85%; border:1px solid var(--border-light);">
-          ${res.reply}
-        </div>
-      `;
-      stream.scrollTop = stream.scrollHeight;
-    } catch (e) {
-      stream.innerHTML += `
-        <div style="background:var(--bg-dark); color:var(--danger); padding:10px 14px; border-radius:10px; align-self:flex-start; max-width:85%;">
-          ⚠️ Could not connect to AI Support Assistant.
-        </div>
-      `;
-    }
-  },
-
-  async submitSupportTicket() {
-    const category = document.getElementById("ticketCategory")?.value;
-    const subject = document.getElementById("ticketSubject")?.value;
-    const message = document.getElementById("ticketMessage")?.value;
-
-    if (!subject || !message) {
-      showToast("Please enter subject and message", "error");
-      return;
-    }
-
-    try {
-      await api.createSupportTicket({ category, subject, message });
-      this.closeModal("ticketModal");
-      showToast("Support ticket submitted to Ministry Admin!", "success");
-      if (auth.getRole() === "admin") this.loadAdminSupportDesk();
-    } catch (e) {
-      showToast(e.message, "error");
-    }
-  },
-
-  // ----------------------------------------------------
-  // Admin Command Center: Farmer Ledger & Ban Engine
-  // ----------------------------------------------------
-  async loadAdminFarmerLedger() {
-    const body = document.getElementById("adminFarmersTableBody");
-    if (!body) return;
-
-    body.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--text-dim);">Loading farmer ledger...</td></tr>`;
-
-    try {
-      const farmers = await api.getAdminFarmers();
-      if (!farmers || farmers.length === 0) {
-        body.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--text-dim);">No registered farmers found in database.</td></tr>`;
-        return;
-      }
-
-      body.innerHTML = farmers
-        .map((f) => `
-          <tr>
-            <td><strong>${f.name}</strong></td>
-            <td><code>${f.phone}</code></td>
-            <td>${f.village}, ${f.state}</td>
-            <td><strong>${f.totalOrders} Orders</strong></td>
-            <td style="font-weight:700; color:var(--success);">₹${f.totalRevenue.toLocaleString()}</td>
-            <td>${f.activeListings} Lots</td>
-            <td>⭐ ${f.trustScore}</td>
-            <td>
-              ${
-                f.isBanned
-                  ? `<button class="btn btn-outline btn-sm" onclick="app.banFarmer('${f.id}')">🟢 Unban Farmer</button>`
-                  : `<button class="btn btn-danger btn-sm" onclick="app.banFarmer('${f.id}')">🚫 Ban Farmer</button>`
-              }
-            </td>
-          </tr>
-        `)
-        .join("");
-    } catch (e) {
-      body.innerHTML = `<tr><td colspan="8" style="color:var(--text-dim);">Error loading farmer ledger: ${e.message}</td></tr>`;
-    }
-  },
-
-  async banFarmer(farmerId) {
-    if (!confirm("Are you sure you want to change the ban status of this farmer?")) return;
-
-    try {
-      const res = await api.banFarmer(farmerId);
-      showToast(res.message, res.isBanned ? "info" : "success");
-      this.loadAdminFarmerLedger();
-      this.loadMarketplace();
-    } catch (e) {
-      showToast(e.message, "error");
-    }
-  },
-
-  async loadAdminSupportDesk() {
-    const body = document.getElementById("adminTicketsTableBody");
-    if (!body) return;
-
-    body.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-dim);">Loading support tickets...</td></tr>`;
-
-    try {
-      const tickets = await api.getSupportTickets();
-      if (!tickets || tickets.length === 0) {
-        body.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-dim);">No support tickets submitted yet.</td></tr>`;
-        return;
-      }
-
-      body.innerHTML = tickets
-        .map((t) => `
-          <tr>
-            <td><code>#${t.id}</code></td>
-            <td><strong>${t.userName}</strong> (${t.userRole})<br><small style="color:var(--text-dim);">${t.userPhone}</small></td>
-            <td><span class="grade-badge" style="background:#4A5568; color:white;">${t.category}</span></td>
-            <td><strong>${t.subject}</strong><div style="font-size:0.85rem; color:var(--text-dim); margin-top:4px;">"${t.message}"</div></td>
-            <td>
-              <span class="user-role-badge" style="background:${t.status === "resolved" ? "var(--success)" : "#D69E2E"}; color:white;">
-                ${t.status === "resolved" ? "RESOLVED" : "OPEN"}
-              </span>
-            </td>
-            <td>
-              ${
-                t.status === "resolved"
-                  ? `<div style="font-size:0.85rem; color:var(--success);"><strong>Reply:</strong> ${t.adminReply}</div>`
-                  : `
-                    <div style="display:flex; gap:6px;">
-                      <input type="text" id="replyInput_${t.id}" class="form-input" placeholder="Official resolution..." style="font-size:0.8rem; padding:4px 8px;">
-                      <button class="btn btn-primary btn-sm" onclick="app.resolveTicket('${t.id}')">Resolve</button>
-                    </div>
-                  `
-              }
-            </td>
-          </tr>
-        `)
-        .join("");
-    } catch (e) {
-      body.innerHTML = `<tr><td colspan="6" style="color:var(--text-dim);">Error loading tickets: ${e.message}</td></tr>`;
-    }
-  },
-
-  async resolveTicket(ticketId) {
-    const input = document.getElementById(`replyInput_${ticketId}`);
-    const reply = input?.value || "Issue resolved by Ministry Administration.";
-
-    try {
-      await api.resolveSupportTicket(ticketId, reply);
-      showToast("Ticket marked as resolved!", "success");
-      this.loadAdminSupportDesk();
-    } catch (e) {
-      showToast(e.message, "error");
-    }
   }
-
 };
 
 window.app = app;

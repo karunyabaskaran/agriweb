@@ -15,8 +15,7 @@ from backend.routes import (
     analytics_bp,
     pooling_bp,
     ivr_sms_bp,
-    admin_bp,
-    support_bp
+    admin_bp
 )
 
 def create_app():
@@ -52,8 +51,6 @@ def create_app():
     app.register_blueprint(pooling_bp)
     app.register_blueprint(ivr_sms_bp)
     app.register_blueprint(admin_bp)
-    app.register_blueprint(support_bp)
-
 
     # Health check
     @app.route("/api/health", methods=["GET"])

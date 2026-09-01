@@ -11,7 +11,6 @@ from backend.routes.analytics_routes import analytics_bp
 from backend.routes.pooling_routes import pooling_bp
 from backend.routes.ivr_sms_routes import ivr_sms_bp
 from backend.routes.admin_routes import admin_bp
-from backend.routes.support_routes import support_bp
 
 __all__ = [
     "auth_bp",
@@ -26,7 +25,5 @@ __all__ = [
     "analytics_bp",
     "pooling_bp",
     "ivr_sms_bp",
-    "admin_bp",
-    "support_bp"
+    "admin_bp"
 ]
-

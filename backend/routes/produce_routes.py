@@ -128,15 +128,14 @@ def create_produce():
         farmer_phone = farmer.get("phone") or g.user.get("phone", "")
         farmer_trust = farmer.get("trustScore", 4.5)
 
-        coords = data.get("coordinates") or (farmer.get("coordinates") if isinstance(farmer, dict) else None)
-        if not coords and lat and lng:
+        coords = farmer.get("coordinates") if isinstance(farmer, dict) else None
+        if lat and lng:
             try:
                 coords = {"lat": float(lat), "lng": float(lng)}
             except ValueError:
                 coords = {"lat": 19.076, "lng": 72.877}
         elif not coords:
             coords = {"lat": 19.076, "lng": 72.877}
-
 
         item = {
             "id": new_id(),
