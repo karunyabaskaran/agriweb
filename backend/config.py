@@ -10,9 +10,11 @@ class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "kisansetu-super-secret-key-2026")
     JWT_SECRET = os.getenv("JWT_SECRET", "kisansetu-jwt-secret-token-key-sih-2026")
     
-    # Firebase settings
+    # Firebase & Supabase settings
     FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID", "")
     FIREBASE_CREDENTIALS_PATH = os.getenv("FIREBASE_CREDENTIALS_PATH", "")
+    SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+    SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
     
     # Razorpay & Stripe settings
     RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "rzp_test_kisansetu123")
