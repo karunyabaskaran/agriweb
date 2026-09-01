@@ -387,28 +387,114 @@
     <section id="admin" class="view-section" style="display:none;">
       <div class="view-header">
         <div class="header-titles">
-          <h2 class="view-title">⚙️ Admin Command Center</h2>
-          <p class="view-subtitle">Regulate prices and monitor sales across states</p>
+          <h2 class="view-title">⚙️ Ministry Admin Command Center</h2>
+          <p class="view-subtitle">Manage farmers, track orders per farmer, regulate marketplace caps, and resolve support complaints.</p>
         </div>
       </div>
-      <div class="card" style="max-width:600px;">
-        <h3>Set Global Price Cap</h3>
-        <p style="color:var(--text-dim); margin-bottom:16px;">Prevent hoarding by capping the max price farmers can list.</p>
-        <div class="form-group">
-          <label class="form-label">Commodity</label>
-          <select id="adminCapCommodity" class="form-input">
-            <option value="Tomato">Tomato</option>
-            <option value="Onion">Onion</option>
-            <option value="Potato">Potato</option>
-          </select>
+
+      <!-- Admin Credentials Banner -->
+      <div style="background:#EBF8FF; border:1px solid #90CDF4; color:#2B6CB0; padding:12px 18px; border-radius:8px; margin-bottom:24px; font-size:0.95rem;">
+        🔐 <strong>Admin Login Credentials:</strong> Mobile: <code>9999999999</code> | Password: <code>admin123</code> (Ministry Command Access)
+      </div>
+
+      <!-- Grid layout for Admin Controls -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:28px;">
+
+        <!-- 1. Enforce Price Cap Card -->
+        <div class="card">
+          <h3>🔒 Set Global Price Cap</h3>
+          <p style="color:var(--text-dim); margin-bottom:16px;">Prevent hoarding by capping maximum allowable farmer listing rates.</p>
+          <div class="form-group">
+            <label class="form-label">Commodity</label>
+            <select id="adminCapCommodity" class="form-input">
+              <option value="Tomato">Tomato</option>
+              <option value="Onion">Onion</option>
+              <option value="Potato">Potato</option>
+              <option value="Wheat">Wheat</option>
+              <option value="Rice">Rice</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Max Price (₹/kg)</label>
+            <input type="number" id="adminCapPrice" class="form-input" placeholder="e.g. 80">
+          </div>
+          <button class="btn btn-primary" onclick="app.setAdminPriceCap()">🔒 Enforce Price Cap</button>
         </div>
-        <div class="form-group">
-          <label class="form-label">Max Price (₹/kg)</label>
-          <input type="number" id="adminCapPrice" class="form-input" placeholder="e.g. 80">
+
+        <!-- 2. Submit Support Complaint Card (For Admin Testing) -->
+        <div class="card">
+          <h3>💬 Ministry Support Hotline</h3>
+          <p style="color:var(--text-dim); margin-bottom:16px;">Direct official communication portal connecting farmers, buyers, and ministry administrators.</p>
+          <button class="btn btn-outline" style="width:100%; margin-bottom:10px;" onclick="app.toggleSupportChat()">
+            💬 Open Support Chatbot
+          </button>
+          <button class="btn btn-primary" style="width:100%;" onclick="app.loadAdminSupportDesk()">
+            📑 Refresh Support Tickets Desk
+          </button>
         </div>
-        <button class="btn btn-primary" onclick="app.setAdminPriceCap()">🔒 Enforce Price Cap</button>
+      </div>
+
+      <!-- 3. Farmer Management & Order Ledger Table -->
+      <div class="card" style="margin-bottom:28px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <div>
+            <h3>👨‍🌾 Registered Farmers & Order Performance Ledger</h3>
+            <p style="color:var(--text-dim); font-size:0.9rem;">View number of orders placed for each farmer and manage farmer account status.</p>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="app.loadAdminFarmerLedger()">🔄 Refresh Farmer Ledger</button>
+        </div>
+
+        <div class="table-container">
+          <table class="radar-table">
+            <thead>
+              <tr>
+                <th>Farmer Name</th>
+                <th>Mobile Phone</th>
+                <th>Location</th>
+                <th>Total Orders Placed</th>
+                <th>Total Revenue (₹)</th>
+                <th>Active Stock</th>
+                <th>Trust Score</th>
+                <th>Account Status & Action</th>
+              </tr>
+            </thead>
+            <tbody id="adminFarmersTableBody">
+              <tr><td colspan="8" style="text-align:center; padding:20px; color:var(--text-dim);">Click 'Refresh Farmer Ledger' to inspect farmers.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 4. Ministry Support Tickets Resolution Desk -->
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <div>
+            <h3>🏛️ Ministry Support Tickets & Dispute Resolution Desk</h3>
+            <p style="color:var(--text-dim); font-size:0.9rem;">Review incoming complaints from farmers/buyers and provide official resolutions.</p>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="app.loadAdminSupportDesk()">🔄 Refresh Support Desk</button>
+        </div>
+
+        <div class="table-container">
+          <table class="radar-table">
+            <thead>
+              <tr>
+                <th>Ticket ID</th>
+                <th>User / Role</th>
+                <th>Category</th>
+                <th>Subject & Message</th>
+                <th>Status</th>
+                <th>Ministry Action / Reply</th>
+              </tr>
+            </thead>
+            <tbody id="adminTicketsTableBody">
+              <tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-dim);">No support tickets submitted yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
+
 
     <!-- ========================================== -->
     <!-- VIEW 5: Price Radar (Analytics)            -->
@@ -666,8 +752,83 @@
     </div>
   </div>
 
+  <!-- ========================================== -->
+  <!-- FLOATING SUPPORT CHATBOT WIDGET            -->
+  <!-- ========================================== -->
+  <div id="supportChatWidget" style="position:fixed; bottom:24px; right:24px; z-index:9999;">
+    <!-- Toggle Button -->
+    <button class="btn btn-primary" onclick="app.toggleSupportChat()" style="border-radius:50px; padding:12px 20px; box-shadow:0 4px 14px rgba(0,0,0,0.25); display:flex; align-items:center; gap:8px; font-weight:800;">
+      💬 <span>Ministry Support & AI Assistant</span>
+    </button>
+
+    <!-- Chat Box Drawer -->
+    <div id="supportChatBox" style="display:none; position:absolute; bottom:60px; right:0; width:360px; height:480px; background:var(--bg-card); border:2px solid var(--border-light); border-radius:16px; box-shadow:0 8px 30px rgba(0,0,0,0.3); flex-direction:column; overflow:hidden;">
+      <div style="background:var(--bg-dark); padding:14px 16px; border-bottom:1px solid var(--border-light); display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <strong style="font-size:1.05rem;">🏛️ AGRIWEB Support Desk</strong>
+          <div style="font-size:0.75rem; color:var(--text-dim);">AI Assistant & Ministry Helpline</div>
+        </div>
+        <button onclick="app.toggleSupportChat()" style="background:none; border:none; color:var(--text-main); font-size:1.2rem; cursor:pointer;">✖</button>
+      </div>
+
+      <!-- Messages Stream -->
+      <div id="chatMessagesStream" style="flex:1; padding:14px; overflow-y:auto; font-size:0.9rem; display:flex; flex-direction:column; gap:10px;">
+        <div style="background:var(--bg-dark); padding:10px 14px; border-radius:10px; align-self:flex-start; max-width:85%; border:1px solid var(--border-light);">
+          👋 Welcome to <strong>AGRIWEB Support Desk</strong>! How can we assist you today with orders, escrow payments, prices, or quality?
+        </div>
+      </div>
+
+      <!-- Input Bar -->
+      <div style="padding:10px; border-top:1px solid var(--border-light); background:var(--bg-dark); display:flex; gap:6px;">
+        <input type="text" id="chatInputMsg" class="form-input" placeholder="Type message or question..." onkeypress="if(event.key==='Enter') app.sendSupportMessage()" style="font-size:0.88rem; padding:8px 12px;">
+        <button class="btn btn-primary btn-sm" onclick="app.sendSupportMessage()">Send</button>
+      </div>
+
+      <div style="padding:6px 10px; background:var(--bg-card); text-align:center; border-top:1px solid var(--border-light);">
+        <button class="btn btn-outline btn-sm" style="width:100%; font-size:0.78rem; padding:4px;" onclick="app.openModal('ticketModal')">
+          📑 Raise Formal Ticket to Ministry Admin
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: Raise Formal Support Ticket        -->
+  <!-- ========================================== -->
+  <div id="ticketModal" class="modal-overlay">
+    <div class="modal-box">
+      <button class="modal-close" onclick="app.closeModal('ticketModal')">✖</button>
+      <h3 style="font-size:1.3rem; margin-bottom:14px;">📑 Submit Formal Support Ticket</h3>
+
+      <div class="form-group">
+        <label class="form-label">Issue Category</label>
+        <select id="ticketCategory" class="form-select">
+          <option value="Escrow & Payment">Escrow & Payment Issue</option>
+          <option value="Order & Delivery">Order Delivery Dispute</option>
+          <option value="Quality & Freshness">Produce Quality Concern</option>
+          <option value="Farmer Account">Farmer Account Assistance</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Subject</label>
+        <input type="text" id="ticketSubject" class="form-input" placeholder="e.g. Escrow payment not released for order #ord-123" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Detailed Message</label>
+        <textarea id="ticketMessage" class="form-input" rows="4" placeholder="Explain your issue clearly for Ministry Admin review..." required></textarea>
+      </div>
+
+      <button class="btn btn-primary" style="width:100%;" onclick="app.submitSupportTicket()">
+        📤 Submit Ticket to Ministry Desk
+      </button>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div id="toastContainer" class="toast-container"></div>
+
 
   <!-- External Libraries (Chart JS) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>

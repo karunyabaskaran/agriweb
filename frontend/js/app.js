@@ -855,8 +855,13 @@ const app = {
       case "prices":
         this.loadPriceRadar();
         break;
+      case "admin":
+        this.loadAdminFarmerLedger();
+        this.loadAdminSupportDesk();
+        break;
     }
   },
+
 
   // ----------------------------------------------------
   // Marketplace & Products Browsing
@@ -2006,7 +2011,183 @@ const app = {
     } catch (e) {
       showToast("Failed to set price cap.", "error");
     }
+  },
+
+  // ----------------------------------------------------
+  // Floating Support Chatbot & Ministry Desk
+  // ----------------------------------------------------
+  toggleSupportChat() {
+    const box = document.getElementById("supportChatBox");
+    if (!box) return;
+    box.style.display = box.style.display === "flex" ? "none" : "flex";
+  },
+
+  async sendSupportMessage() {
+    const input = document.getElementById("chatInputMsg");
+    const stream = document.getElementById("chatMessagesStream");
+    if (!input || !stream) return;
+
+    const userText = input.value.trim();
+    if (!userText) return;
+
+    // Render user message
+    stream.innerHTML += `
+      <div style="background:var(--primary); color:white; padding:10px 14px; border-radius:10px; align-self:flex-end; max-width:85%;">
+        ${userText}
+      </div>
+    `;
+    input.value = "";
+    stream.scrollTop = stream.scrollHeight;
+
+    try {
+      const res = await api.sendSupportChat(userText);
+      stream.innerHTML += `
+        <div style="background:var(--bg-dark); padding:10px 14px; border-radius:10px; align-self:flex-start; max-width:85%; border:1px solid var(--border-light);">
+          ${res.reply}
+        </div>
+      `;
+      stream.scrollTop = stream.scrollHeight;
+    } catch (e) {
+      stream.innerHTML += `
+        <div style="background:var(--bg-dark); color:var(--danger); padding:10px 14px; border-radius:10px; align-self:flex-start; max-width:85%;">
+          ⚠️ Could not connect to AI Support Assistant.
+        </div>
+      `;
+    }
+  },
+
+  async submitSupportTicket() {
+    const category = document.getElementById("ticketCategory")?.value;
+    const subject = document.getElementById("ticketSubject")?.value;
+    const message = document.getElementById("ticketMessage")?.value;
+
+    if (!subject || !message) {
+      showToast("Please enter subject and message", "error");
+      return;
+    }
+
+    try {
+      await api.createSupportTicket({ category, subject, message });
+      this.closeModal("ticketModal");
+      showToast("Support ticket submitted to Ministry Admin!", "success");
+      if (auth.getRole() === "admin") this.loadAdminSupportDesk();
+    } catch (e) {
+      showToast(e.message, "error");
+    }
+  },
+
+  // ----------------------------------------------------
+  // Admin Command Center: Farmer Ledger & Ban Engine
+  // ----------------------------------------------------
+  async loadAdminFarmerLedger() {
+    const body = document.getElementById("adminFarmersTableBody");
+    if (!body) return;
+
+    body.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--text-dim);">Loading farmer ledger...</td></tr>`;
+
+    try {
+      const farmers = await api.getAdminFarmers();
+      if (!farmers || farmers.length === 0) {
+        body.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--text-dim);">No registered farmers found in database.</td></tr>`;
+        return;
+      }
+
+      body.innerHTML = farmers
+        .map((f) => `
+          <tr>
+            <td><strong>${f.name}</strong></td>
+            <td><code>${f.phone}</code></td>
+            <td>${f.village}, ${f.state}</td>
+            <td><strong>${f.totalOrders} Orders</strong></td>
+            <td style="font-weight:700; color:var(--success);">₹${f.totalRevenue.toLocaleString()}</td>
+            <td>${f.activeListings} Lots</td>
+            <td>⭐ ${f.trustScore}</td>
+            <td>
+              ${
+                f.isBanned
+                  ? `<button class="btn btn-outline btn-sm" onclick="app.banFarmer('${f.id}')">🟢 Unban Farmer</button>`
+                  : `<button class="btn btn-danger btn-sm" onclick="app.banFarmer('${f.id}')">🚫 Ban Farmer</button>`
+              }
+            </td>
+          </tr>
+        `)
+        .join("");
+    } catch (e) {
+      body.innerHTML = `<tr><td colspan="8" style="color:var(--text-dim);">Error loading farmer ledger: ${e.message}</td></tr>`;
+    }
+  },
+
+  async banFarmer(farmerId) {
+    if (!confirm("Are you sure you want to change the ban status of this farmer?")) return;
+
+    try {
+      const res = await api.banFarmer(farmerId);
+      showToast(res.message, res.isBanned ? "info" : "success");
+      this.loadAdminFarmerLedger();
+      this.loadMarketplace();
+    } catch (e) {
+      showToast(e.message, "error");
+    }
+  },
+
+  async loadAdminSupportDesk() {
+    const body = document.getElementById("adminTicketsTableBody");
+    if (!body) return;
+
+    body.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-dim);">Loading support tickets...</td></tr>`;
+
+    try {
+      const tickets = await api.getSupportTickets();
+      if (!tickets || tickets.length === 0) {
+        body.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-dim);">No support tickets submitted yet.</td></tr>`;
+        return;
+      }
+
+      body.innerHTML = tickets
+        .map((t) => `
+          <tr>
+            <td><code>#${t.id}</code></td>
+            <td><strong>${t.userName}</strong> (${t.userRole})<br><small style="color:var(--text-dim);">${t.userPhone}</small></td>
+            <td><span class="grade-badge" style="background:#4A5568; color:white;">${t.category}</span></td>
+            <td><strong>${t.subject}</strong><div style="font-size:0.85rem; color:var(--text-dim); margin-top:4px;">"${t.message}"</div></td>
+            <td>
+              <span class="user-role-badge" style="background:${t.status === "resolved" ? "var(--success)" : "#D69E2E"}; color:white;">
+                ${t.status === "resolved" ? "RESOLVED" : "OPEN"}
+              </span>
+            </td>
+            <td>
+              ${
+                t.status === "resolved"
+                  ? `<div style="font-size:0.85rem; color:var(--success);"><strong>Reply:</strong> ${t.adminReply}</div>`
+                  : `
+                    <div style="display:flex; gap:6px;">
+                      <input type="text" id="replyInput_${t.id}" class="form-input" placeholder="Official resolution..." style="font-size:0.8rem; padding:4px 8px;">
+                      <button class="btn btn-primary btn-sm" onclick="app.resolveTicket('${t.id}')">Resolve</button>
+                    </div>
+                  `
+              }
+            </td>
+          </tr>
+        `)
+        .join("");
+    } catch (e) {
+      body.innerHTML = `<tr><td colspan="6" style="color:var(--text-dim);">Error loading tickets: ${e.message}</td></tr>`;
+    }
+  },
+
+  async resolveTicket(ticketId) {
+    const input = document.getElementById(`replyInput_${ticketId}`);
+    const reply = input?.value || "Issue resolved by Ministry Administration.";
+
+    try {
+      await api.resolveSupportTicket(ticketId, reply);
+      showToast("Ticket marked as resolved!", "success");
+      this.loadAdminSupportDesk();
+    } catch (e) {
+      showToast(e.message, "error");
+    }
   }
+
 };
 
 window.app = app;

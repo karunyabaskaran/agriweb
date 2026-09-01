@@ -79,7 +79,13 @@ def login():
     if not user:
         return jsonify({"error": "Invalid mobile number or password"}), 401
 
+    if user.get("isBanned"):
+        return jsonify({"error": "This account has been deactivated/banned by Ministry Administration."}), 403
+
+
+
     try:
+
         stored_hash = user.get("passwordHash", "")
         if not stored_hash or not bcrypt.checkpw(password.encode("utf-8"), stored_hash.encode("utf-8")):
             return jsonify({"error": "Invalid mobile number or password"}), 401
