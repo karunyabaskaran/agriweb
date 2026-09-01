@@ -557,6 +557,18 @@ const app = {
   onAuthChanged() {
     this.updateRoleUI();
     
+    // Check for shared product deep link parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const sharedProduceId = urlParams.get("produceId");
+
+    if (sharedProduceId) {
+      this.navigate("marketplace");
+      setTimeout(() => {
+        this.openProductDetailsModal(sharedProduceId);
+      }, 600);
+      return;
+    }
+
     // Redirect logic: If not logged in, enforce Auth screen
     if (!auth.isLoggedIn()) {
       this.navigate("auth");
@@ -935,7 +947,8 @@ const app = {
         const farmerUplift = mandi ? mandi.farmerUpliftVsMandi : "+33.3%";
         const buyerSavings = mandi ? mandi.buyerSavingsVsRetail : "~25.0%";
 
-        const shareText = encodeURIComponent(`Check out fresh ${item.commodity} (Grade ${item.grade}) on AGRIWEB! Direct Rate: ₹${item.askingPricePerKg}/kg from ${item.farmerName}, ${item.village}, ${item.state}.`);
+        const productUrl = `${window.location.origin}${window.location.pathname}?produceId=${item.id}`;
+        const shareText = encodeURIComponent(`Check out fresh ${item.commodity} (Grade ${item.grade}) on AGRIWEB! Direct Rate: ₹${item.askingPricePerKg}/kg from ${item.farmerName}, ${item.village}, ${item.state}.\n\nView Produce:\n${productUrl}`);
         const whatsappUrl = `https://api.whatsapp.com/send?text=${shareText}`;
 
         return `
@@ -1057,7 +1070,8 @@ const app = {
     const isFarmer = auth.isLoggedIn() && auth.getRole() === "farmer";
     const isOwner = auth.isLoggedIn() && auth.currentUser?.phone === item.farmerPhone;
 
-    const shareText = encodeURIComponent(`Check out fresh ${item.commodity} (Grade ${item.grade}) on AGRIWEB! Direct Rate: ₹${item.askingPricePerKg}/kg from ${item.farmerName}, ${item.village}, ${item.state}.`);
+    const productUrl = `${window.location.origin}${window.location.pathname}?produceId=${item.id}`;
+    const shareText = encodeURIComponent(`Check out fresh ${item.commodity} (Grade ${item.grade}) on AGRIWEB! Direct Rate: ₹${item.askingPricePerKg}/kg from ${item.farmerName}, ${item.village}, ${item.state}.\n\nView Produce:\n${productUrl}`);
     const whatsappUrl = `https://api.whatsapp.com/send?text=${shareText}`;
 
     contentEl.innerHTML = `
@@ -1218,7 +1232,8 @@ const app = {
             const farmerUplift = mandi ? mandi.farmerUpliftVsMandi : "+33.3%";
             const buyerSavings = mandi ? mandi.buyerSavingsVsRetail : "~25.0%";
 
-            const shareText = encodeURIComponent(`Check out fresh ${item.commodity} (Grade ${item.grade}) on AGRIWEB! Direct Rate: ₹${item.askingPricePerKg}/kg from ${item.farmerName}, ${item.village}, ${item.state}.`);
+            const productUrl = `${window.location.origin}${window.location.pathname}?produceId=${item.id}`;
+            const shareText = encodeURIComponent(`Check out fresh ${item.commodity} (Grade ${item.grade}) on AGRIWEB! Direct Rate: ₹${item.askingPricePerKg}/kg from ${item.farmerName}, ${item.village}, ${item.state}.\n\nView Produce:\n${productUrl}`);
             const whatsappUrl = `https://api.whatsapp.com/send?text=${shareText}`;
 
             return `
