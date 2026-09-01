@@ -468,7 +468,15 @@
         </div>
       </div>
 
+      <div style="margin-bottom:14px;">
+        <button type="button" class="btn btn-outline btn-sm" style="width:100%; border-style:dashed; font-weight:700;" onclick="app.fetchDeviceGPS('buyer')">
+          📍 Detect My Current Device GPS Location
+        </button>
+        <div id="buyerGpsStatus" style="font-size:0.8rem; margin-top:4px; font-weight:600;"></div>
+      </div>
+
       <div class="form-group">
+
         <label class="form-label" data-i18n="lblOrderQty">Order Quantity (kg)</label>
         <input type="number" id="orderQtyInput" class="form-input" min="10" value="100"
           oninput="app.updateOrderSummary()">
@@ -563,7 +571,15 @@
         </div>
       </div>
 
+      <div style="margin-bottom:14px;">
+        <button type="button" class="btn btn-outline btn-sm" style="width:100%; border-style:dashed; font-weight:700;" onclick="app.fetchDeviceGPS('farmer')">
+          📍 Detect My Current Device GPS Location
+        </button>
+        <div id="farmerGpsStatus" style="font-size:0.8rem; margin-top:4px; font-weight:600;"></div>
+      </div>
+
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+
         <div class="form-group">
           <label class="form-label" data-i18n="lblVillage">Village / Location</label>
           <input type="text" id="postVillage" class="form-input" placeholder="e.g. Dindori, Nashik">

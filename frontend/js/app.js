@@ -1371,6 +1371,50 @@ const app = {
     if (grandEl) grandEl.textContent = `₹${grandTotal.toFixed(2)}`;
   },
 
+  // HTML5 Hardware Geolocation Device GPS Detection
+  fetchDeviceGPS(role = "farmer") {
+    const statusEl = document.getElementById(role === "farmer" ? "farmerGpsStatus" : "buyerGpsStatus");
+    if (!navigator.geolocation) {
+      showToast("Geolocation is not supported by your device browser.", "error");
+      return;
+    }
+
+    if (statusEl) statusEl.innerHTML = "⏳ Accessing device hardware GPS...";
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = parseFloat(position.coords.latitude.toFixed(6));
+        const lng = parseFloat(position.coords.longitude.toFixed(6));
+
+        if (role === "farmer") {
+          this.farmerCoordinates = { lat, lng, name: `Farmer Device GPS (${lat}, ${lng})` };
+          const villageInput = document.getElementById("postVillage");
+          if (villageInput && !villageInput.value) {
+            villageInput.value = `GPS (${lat}, ${lng})`;
+          }
+          if (statusEl) statusEl.innerHTML = `✅ Device GPS Acquired: <code>${lat}, ${lng}</code>`;
+        } else {
+          this.buyerCoordinates = { lat, lng, name: `Buyer Device GPS (${lat}, ${lng})` };
+          if (statusEl) statusEl.innerHTML = `✅ Device GPS Acquired: <code>${lat}, ${lng}</code>`;
+        }
+
+        showToast(`📍 Device Hardware GPS Acquired: ${lat}, ${lng}`, "success");
+      },
+      (error) => {
+        let msg = "Could not retrieve GPS location.";
+        if (error.code === error.PERMISSION_DENIED) {
+          msg = "GPS Permission denied. Please allow location access in browser settings.";
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          msg = "GPS Hardware position unavailable.";
+        } else if (error.code === error.TIMEOUT) {
+          msg = "GPS location request timed out.";
+        }
+        if (statusEl) statusEl.innerHTML = `<span style="color:var(--danger)">⚠️ ${msg}</span>`;
+        showToast(msg, "error");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    ),
+
   async confirmOrder() {
     if (!this.selectedProduceForOrder) return;
 
@@ -1387,7 +1431,8 @@ const app = {
       const res = await api.createOrder({
         produceId: this.selectedProduceForOrder.id,
         quantityKg: qty,
-        paymentMethod: "UPI / Escrow Guaranteed"
+        paymentMethod: "UPI / Escrow Guaranteed",
+        deliveryDestination: this.buyerCoordinates || null
       });
 
       this.closeModal("orderModal");
@@ -1403,6 +1448,7 @@ const app = {
       if (btn) btn.disabled = false;
     }
   },
+
 
   // ----------------------------------------------------
   // Orders & Payment Escrow Ledger
@@ -1742,8 +1788,10 @@ const app = {
         grade,
         village,
         state,
-        imagePath: imageBase64
+        imagePath: imageBase64,
+        coordinates: this.farmerCoordinates || null
       });
+
 
       this.closeModal("createProduceModal");
       showToast("Product listed in Marketplace successfully!");

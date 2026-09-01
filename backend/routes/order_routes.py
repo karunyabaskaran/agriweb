@@ -43,7 +43,8 @@ def create_order():
         transaction_id = f"TXN_{order_id.upper()}"
 
         origin = produce.get("coordinates") or {"lat": 19.076, "lng": 72.877, "name": produce.get("village", "Farm Village")}
-        dest = buyer.get("coordinates") or {"lat": 19.033, "lng": 73.029, "name": buyer.get("village", "Buyer Hub")}
+        dest = data.get("deliveryDestination") or buyer.get("coordinates") or {"lat": 19.033, "lng": 73.029, "name": buyer.get("village", "Buyer Hub")}
+
 
         order = {
             "id": order_id,
