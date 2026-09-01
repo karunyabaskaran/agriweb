@@ -589,6 +589,7 @@ const app = {
 
     const navMyProducts = document.getElementById("navMyProducts");
     const navMyOrders = document.getElementById("navMyOrders");
+    const navSupport = document.getElementById("navSupport");
     const loginBtn = document.getElementById("loginBtn");
     
     const postProduceMarketBtn = document.getElementById("postProduceMarketBtn");
@@ -599,16 +600,17 @@ const app = {
 
     if (isLoggedIn) {
       if (loginBtn) loginBtn.style.display = "none";
+      if (navSupport) navSupport.style.display = "block";
 
       if (role === "farmer") {
         if (navMyProducts) navMyProducts.style.display = "block";
-        if (navMyOrders) navMyOrders.style.display = "none";
+        if (navMyOrders) navMyOrders.style.display = "block";
         if (navAdmin) navAdmin.style.display = "none";
         if (postProduceMarketBtn) postProduceMarketBtn.style.display = "block";
         if (navPostProduceBtn) navPostProduceBtn.style.display = "block";
       } else if (role === "admin") {
         if (navMyProducts) navMyProducts.style.display = "none";
-        if (navMyOrders) navMyOrders.style.display = "none";
+        if (navMyOrders) navMyOrders.style.display = "block";
         if (navAdmin) navAdmin.style.display = "block";
         if (postProduceMarketBtn) postProduceMarketBtn.style.display = "none";
         if (navPostProduceBtn) navPostProduceBtn.style.display = "none";
@@ -628,12 +630,14 @@ const app = {
       if (loginBtn) loginBtn.style.display = "inline-flex";
       if (navMyProducts) navMyProducts.style.display = "none";
       if (navMyOrders) navMyOrders.style.display = "none";
+      if (navSupport) navSupport.style.display = "none";
       if (navAdmin) navAdmin.style.display = "none";
       if (postProduceMarketBtn) postProduceMarketBtn.style.display = "none";
       if (navPostProduceBtn) navPostProduceBtn.style.display = "none";
       if (dashboardSummary) dashboardSummary.style.display = "none";
     }
   },
+
 
   async renderDashboardSummary() {
     const container = document.getElementById("dashboardSummary");
@@ -830,11 +834,13 @@ const app = {
 
     // Toggle section visibility
     document.querySelectorAll(".view-section").forEach((sec) => {
+      sec.style.display = "none";
       sec.classList.remove("active");
     });
 
-    const targetSec = document.getElementById(viewId);
+    const targetSec = document.getElementById(viewId === "support" ? "supportView" : viewId);
     if (targetSec) {
+      targetSec.style.display = "block";
       targetSec.classList.add("active");
     }
 
@@ -855,8 +861,12 @@ const app = {
       case "prices":
         this.loadPriceRadar();
         break;
+      case "support":
+        this.loadSupportTickets();
+        break;
     }
   },
+
 
   // ----------------------------------------------------
   // Marketplace & Products Browsing
@@ -1425,16 +1435,63 @@ const app = {
       ordersBody.innerHTML = this.allOrders
         .map((o) => {
           const isFarmer = auth.getRole() === "farmer";
-          const canConfirmDelivery = !isFarmer && (o.status === "confirmed" || o.status === "dispatched");
-          const canRate = !isFarmer && o.status === "delivered";
+          const isPending = o.status === "pending_approval";
+          const isConfirmed = o.status === "confirmed";
+          const isDispatched = o.status === "dispatched";
+          const isDelivered = o.status === "delivered";
+          const isRejected = o.status === "rejected";
 
-          let statusText = "Safe Escrow Secured";
-          if (o.paymentStatus === "escrow_released") statusText = "Funds Released to Farmer";
+          const canConfirmDelivery = !isFarmer && (isConfirmed || isDispatched);
+          const canRate = !isFarmer && isDelivered;
 
-          // Stepper calculation (Suggestion C)
-          const isStep1 = true;
-          const isStep2 = o.status === "dispatched" || o.status === "delivered";
-          const isStep3 = o.status === "delivered";
+          let statusBadge = "Safe Escrow Secured";
+          let badgeColor = "#4A5568";
+
+          if (isPending) {
+            statusBadge = "⏳ Pending Farmer Approval";
+            badgeColor = "#DD6B20";
+          } else if (isRejected) {
+            statusBadge = "✖ Declined / Refunded";
+            badgeColor = "#E53E3E";
+          } else if (o.paymentStatus === "escrow_released") {
+            statusBadge = "Funds Released to Farmer";
+            badgeColor = "var(--success)";
+          }
+
+          // Stepper calculation
+          const isStep1 = !isPending && !isRejected;
+          const isStep2 = isDispatched || isDelivered;
+          const isStep3 = isDelivered;
+
+          let actionContent = "";
+          if (isFarmer) {
+            if (isPending) {
+              actionContent = `
+                <div style="display:flex; gap:6px;">
+                  <button class="btn btn-primary btn-sm" onclick="app.acceptFarmerOrder('${o.id}')">✔ Accept Order</button>
+                  <button class="btn btn-danger btn-sm" onclick="app.rejectFarmerOrder('${o.id}')">✖ Reject</button>
+                </div>
+              `;
+            } else if (isConfirmed || isDispatched) {
+              actionContent = `<span style="font-size:0.85rem; color:var(--success); font-weight:700;">✔ Order Accepted</span>`;
+            } else if (isRejected) {
+              actionContent = `<span style="font-size:0.85rem; color:var(--danger); font-weight:700;">✖ Declined</span>`;
+            } else {
+              actionContent = `<span style="font-size:0.85rem; color:var(--text-dim); font-weight:700;">Completed</span>`;
+            }
+          } else {
+            if (isPending) {
+              actionContent = `<span style="font-size:0.85rem; color:#DD6B20; font-weight:700;">⏳ Awaiting Farmer</span>`;
+            } else if (canConfirmDelivery) {
+              actionContent = `<button class="btn btn-primary btn-sm" onclick="app.updateOrderStatus('${o.id}', 'delivered')">✔ Confirm Received</button>`;
+            } else if (canRate) {
+              actionContent = `<button class="btn btn-outline btn-sm" onclick="app.openRatingModal('${o.id}')">⭐ Rate Quality</button>`;
+            } else if (isRejected) {
+              actionContent = `<span style="font-size:0.85rem; color:var(--danger); font-weight:700;">✖ Declined (Refunded)</span>`;
+            } else {
+              actionContent = `<span style="font-size:0.88rem; color:var(--text-dim); font-weight:700;">Completed ${o.rating ? `(⭐ ${o.rating}/5)` : ""}</span>`;
+            }
+          }
 
           return `
             <tr>
@@ -1445,8 +1502,8 @@ const app = {
               <td>${o.quantityKg} kg</td>
               <td style="font-weight:700;">₹${o.totalPrice}</td>
               <td>
-                <span class="user-role-badge" style="background:${o.paymentStatus === "escrow_released" ? "var(--success)" : "#4A5568"}">
-                  ${statusText}
+                <span class="user-role-badge" style="background:${badgeColor}">
+                  ${statusBadge}
                 </span>
                 <div class="order-timeline">
                   <span class="timeline-step ${isStep1 ? (isStep2 ? "completed" : "active") : ""}">${t("stepPlaced", "1. Placed")}</span>
@@ -1457,13 +1514,7 @@ const app = {
                 </div>
               </td>
               <td>
-                ${
-                  canConfirmDelivery
-                    ? `<button class="btn btn-primary btn-sm" onclick="app.updateOrderStatus('${o.id}', 'delivered')">✔ Confirm Received</button>`
-                    : canRate
-                    ? `<button class="btn btn-outline btn-sm" onclick="app.openRatingModal('${o.id}')">⭐ Rate Quality</button>`
-                    : `<span style="font-size:0.88rem; color:var(--text-dim); font-weight:700;">Completed ${o.rating ? `(⭐ ${o.rating}/5)` : ""}</span>`
-                }
+                ${actionContent}
               </td>
             </tr>
           `;
@@ -1473,6 +1524,105 @@ const app = {
       ordersBody.innerHTML = `<tr><td colspan="8" style="color:var(--text-dim);">Error: ${e.message}</td></tr>`;
     }
   },
+
+  async acceptFarmerOrder(orderId) {
+    try {
+      await api.acceptOrder(orderId);
+      showToast("Order accepted successfully! Escrow funds secured.");
+      this.loadOrdersLedger();
+      if (auth.isLoggedIn()) this.renderDashboardSummary();
+    } catch (e) {
+      showToast(e.message, "error");
+    }
+  },
+
+  async rejectFarmerOrder(orderId) {
+    if (!confirm("Are you sure you want to decline this order? The produce quantity will be returned to your listed stock.")) return;
+    try {
+      await api.rejectOrder(orderId);
+      showToast("Order declined. Stock restored to marketplace.");
+      this.loadOrdersLedger();
+      if (auth.isLoggedIn()) this.renderDashboardSummary();
+    } catch (e) {
+      showToast(e.message, "error");
+    }
+  },
+
+  async submitSupportTicket() {
+    const category = document.getElementById("ticketCategory")?.value;
+    const subject = document.getElementById("ticketSubject")?.value;
+    const orderId = document.getElementById("ticketOrderId")?.value;
+    const description = document.getElementById("ticketDescription")?.value;
+    const btn = document.getElementById("submitTicketBtn");
+
+    if (!subject || !description) {
+      showToast("Please fill in subject and description.", "warning");
+      return;
+    }
+
+    try {
+      if (btn) btn.disabled = true;
+      await api.createSupportTicket({ category, subject, orderId, description });
+      showToast("🏛️ Grievance submitted successfully to the Ministry of Agriculture!", "success");
+      
+      if (document.getElementById("ticketSubject")) document.getElementById("ticketSubject").value = "";
+      if (document.getElementById("ticketOrderId")) document.getElementById("ticketOrderId").value = "";
+      if (document.getElementById("ticketDescription")) document.getElementById("ticketDescription").value = "";
+
+      this.loadSupportTickets();
+    } catch (e) {
+      showToast(e.message, "error");
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  },
+
+  async loadSupportTickets() {
+    const body = document.getElementById("supportTicketsBody");
+    if (!body) return;
+
+    try {
+      const tickets = await api.getSupportTickets();
+      if (!tickets || tickets.length === 0) {
+        body.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-dim); padding:30px;">No grievances raised yet. Use the form on the left to submit an issue to the Ministry.</td></tr>`;
+        return;
+      }
+
+      body.innerHTML = tickets.map((t) => {
+        let badgeColor = "#ED8936";
+        let statusLabel = "⏳ Pending Ministry Review";
+        if (t.status === "in_progress") {
+          badgeColor = "#3182CE";
+          statusLabel = "🔄 Under Investigation";
+        } else if (t.status === "resolved") {
+          badgeColor = "#38A169";
+          statusLabel = "✔ Resolved";
+        }
+
+        const dateStr = t.createdAt ? new Date(t.createdAt).toLocaleDateString() : "Recent";
+        const responseStr = t.adminResponse ? `<span style="color:var(--success); font-weight:700;">${t.adminResponse}</span>` : `<span style="color:var(--text-dim); font-style:italic;">Awaiting Ministry Response</span>`;
+
+        return `
+          <tr>
+            <td><code>#${t.id}</code></td>
+            <td><strong>${t.category}</strong></td>
+            <td>${t.subject}</td>
+            <td>${t.orderId ? `<code>#${t.orderId}</code>` : "N/A"}</td>
+            <td>
+              <span class="user-role-badge" style="background:${badgeColor}; font-size:0.75rem;">
+                ${statusLabel}
+              </span>
+            </td>
+            <td>${responseStr}</td>
+            <td style="font-size:0.85rem; color:var(--text-dim);">${dateStr}</td>
+          </tr>
+        `;
+      }).join("");
+    } catch (e) {
+      body.innerHTML = `<tr><td colspan="7" style="color:var(--text-dim); padding:20px;">Error loading tickets: ${e.message}</td></tr>`;
+    }
+  },
+
 
   async updateOrderStatus(orderId, status) {
     try {

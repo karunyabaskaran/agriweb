@@ -1223,6 +1223,66 @@
         4
       ],
       "createdAt": "2026-09-01T09:48:57.893537Z"
+    },
+    {
+      "id": "48a35d9b-a101-4db2-9144-2461d0753669",
+      "name": "Kisan Tester",
+      "phone": "9000352471",
+      "passwordHash": "$2b$12$EN2jBXnt7DBKqhGs4UlFLeQL7rxNUz50bfuC3ZHo2YeZe4iwmqVwu",
+      "role": "farmer",
+      "village": "Nashik",
+      "state": "Maharashtra",
+      "coordinates": {
+        "lat": 19.076,
+        "lng": 72.877
+      },
+      "language": "en",
+      "trustScore": 4.5,
+      "ratings": [
+        5,
+        4
+      ],
+      "createdAt": "2026-09-01T10:11:26.558418Z"
+    },
+    {
+      "id": "504d0e3f-b652-420c-b8e9-cd6c0632d57e",
+      "name": "FreshBuyer Retail",
+      "phone": "9000352472",
+      "passwordHash": "$2b$12$h4DRqI8EUgML8k7dun7EVeE0QWBKv9i0vetyYOdJ6.2ygrU7q0XKm",
+      "role": "buyer",
+      "village": "Mumbai",
+      "state": "Maharashtra",
+      "coordinates": {
+        "lat": 19.076,
+        "lng": 72.877
+      },
+      "language": "en",
+      "trustScore": 4.5,
+      "ratings": [
+        5,
+        4
+      ],
+      "createdAt": "2026-09-01T10:11:26.926125Z"
+    },
+    {
+      "id": "0466118a-8742-4a2e-bec0-8b4c3c325182",
+      "name": "Ministry Officer",
+      "phone": "9000352473",
+      "passwordHash": "$2b$12$QNJNpcHjnwjq8WmamoeKPOAL/ATJyRXwtWW8AUX9uqAAG4//nzHsC",
+      "role": "admin",
+      "village": "Delhi",
+      "state": "Delhi",
+      "coordinates": {
+        "lat": 19.076,
+        "lng": 72.877
+      },
+      "language": "en",
+      "trustScore": 4.5,
+      "ratings": [
+        5,
+        4
+      ],
+      "createdAt": "2026-09-01T10:11:27.387333Z"
     }
   ],
   "produce": [
@@ -1840,6 +1900,30 @@
       "poolId": null,
       "imagePath": null,
       "createdAt": "2026-09-01T09:48:58.930303Z"
+    },
+    {
+      "id": "75fe3bd6-ad18-48cf-8a25-51a5161946b5",
+      "farmerId": "48a35d9b-a101-4db2-9144-2461d0753669",
+      "farmerName": "Kisan Tester",
+      "farmerPhone": "9000352471",
+      "farmerTrustScore": 4.5,
+      "commodity": "Onion",
+      "variety": "Red Nashik",
+      "quantityKg": 400.0,
+      "askingPricePerKg": 24.5,
+      "grade": "GRADE A",
+      "village": "Dindori, Nashik",
+      "state": "Maharashtra",
+      "coordinates": {
+        "lat": 19.076,
+        "lng": 72.877
+      },
+      "harvestDate": null,
+      "shelfLifeDays": 10,
+      "status": "listed",
+      "poolId": null,
+      "imagePath": null,
+      "createdAt": "2026-09-01T10:11:27.751927Z"
     }
   ],
   "mandiPrices": [
@@ -2475,6 +2559,33 @@
         "lng": 72.877
       },
       "createdAt": "2026-09-01T09:48:59.000405Z"
+    },
+    {
+      "id": "ord-7e9f69c5",
+      "produceId": "75fe3bd6-ad18-48cf-8a25-51a5161946b5",
+      "commodity": "Onion",
+      "variety": "Red Nashik",
+      "farmerId": "48a35d9b-a101-4db2-9144-2461d0753669",
+      "farmerName": "Kisan Tester",
+      "farmerPhone": "9000352471",
+      "buyerId": "504d0e3f-b652-420c-b8e9-cd6c0632d57e",
+      "buyerName": "FreshBuyer Retail",
+      "buyerPhone": "9000352472",
+      "quantityKg": 100.0,
+      "pricePerKg": 24.5,
+      "totalPrice": 2450.0,
+      "status": "delivered",
+      "paymentStatus": "escrow_released",
+      "transactionId": "TXN_ORD-7E9F69C5",
+      "deliveryOrigin": {
+        "lat": 19.076,
+        "lng": 72.877
+      },
+      "deliveryDestination": {
+        "lat": 19.076,
+        "lng": 72.877
+      },
+      "createdAt": "2026-09-01T10:11:27.765233Z"
     }
   ],
   "advances": [
@@ -2689,6 +2800,17 @@
       "farmerShare": 2425.5,
       "platformFee": 24.5,
       "timestamp": "2026-09-01T09:48:59.027670Z"
+    },
+    {
+      "id": "pay-b9daf450",
+      "orderId": "ord-7e9f69c5",
+      "amount": 2450.0,
+      "method": "UPI / Escrow Guaranteed",
+      "status": "settled",
+      "escrowStatus": "released_to_farmer",
+      "farmerShare": 2425.5,
+      "platformFee": 24.5,
+      "timestamp": "2026-09-01T10:11:27.771881Z"
     }
   ],
   "warehouses": [
@@ -2769,6 +2891,12 @@
       "id": "wh-71687",
       "location": "Nashik APMC Hub",
       "name": "Nashik Agro Cold Storage"
+    },
+    {
+      "capacity": 50000,
+      "id": "wh-35247",
+      "location": "Nashik APMC Hub",
+      "name": "Nashik Agro Cold Storage"
     }
   ],
   "vehicles": [
@@ -2836,6 +2964,11 @@
       "capacity": 3500,
       "id": "veh-71687",
       "license_plate": "MH-15-AG-7168"
+    },
+    {
+      "capacity": 3500,
+      "id": "veh-35247",
+      "license_plate": "MH-15-AG-3524"
     }
   ],
   "tickets": [
@@ -2866,6 +2999,21 @@
       "status": "resolved",
       "createdAt": "2026-09-01T09:42:26.085256Z",
       "resolvedAt": "2026-09-01T09:42:26.130126Z"
+    }
+  ],
+  "support_tickets": [
+    {
+      "id": "tck-a7bf1217",
+      "userId": "504d0e3f-b652-420c-b8e9-cd6c0632d57e",
+      "userName": "FreshBuyer Retail",
+      "userRole": "buyer",
+      "orderId": "ord-7e9f69c5",
+      "category": "Escrow & Payment Dispute",
+      "subject": "Delayed Escrow Release Verification",
+      "description": "Please verify payment settlement for order ord-21f2d19e",
+      "status": "resolved",
+      "adminResponse": "Verified by Ministry Escrow Desk. Settlement released.",
+      "createdAt": "2026-09-01T10:11:27.943408Z"
     }
   ]
 }

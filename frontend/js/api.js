@@ -56,9 +56,17 @@ const api = {
   createOrder: (payload) => apiRequest("/orders", { method: "POST", body: payload, auth: true }),
   getMyOrders: () => apiRequest("/orders/mine", { auth: true }),
   getOrderDetails: (id) => apiRequest(`/orders/${id}`, { auth: true }),
+  acceptOrder: (id) => apiRequest(`/orders/${id}/accept`, { method: "POST", auth: true }),
+  rejectOrder: (id) => apiRequest(`/orders/${id}/reject`, { method: "POST", auth: true }),
   updateOrderStatus: (id, status) =>
     apiRequest(`/orders/${id}/status`, { method: "PATCH", body: { status }, auth: true }),
   rateOrder: (id, payload) => apiRequest(`/orders/${id}/rate`, { method: "POST", body: payload, auth: true }),
+
+  // Ministry Support & Grievances
+  createSupportTicket: (payload) => apiRequest("/support/tickets", { method: "POST", body: payload, auth: true }),
+  getSupportTickets: () => apiRequest("/support/tickets", { auth: true }),
+  updateSupportTicket: (id, payload) => apiRequest(`/support/tickets/${id}`, { method: "PATCH", body: payload, auth: true }),
+
 
   // Aggregation & Small-Lot Pooling
   getPools: () => apiRequest("/pools"),

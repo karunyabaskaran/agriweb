@@ -59,7 +59,7 @@ def create_order():
             "quantityKg": req_qty,
             "pricePerKg": unit_price,
             "totalPrice": total_price,
-            "status": "confirmed", # confirmed -> dispatched -> delivered -> rated
+            "status": "pending_approval", # pending_approval -> confirmed -> dispatched -> delivered -> rated
             "paymentStatus": "held_in_escrow", # held_in_escrow -> released_to_farmer
             "transactionId": transaction_id,
             "deliveryOrigin": origin,
@@ -94,6 +94,69 @@ def create_order():
     except Exception as e:
         print(f"Error creating order: {e}")
         return jsonify({"error": f"Failed to place order: {str(e)}"}), 500
+
+
+@order_bp.route("/<order_id>/accept", methods=["POST"])
+@auth_required
+@require_role("farmer", "admin")
+def accept_order(order_id):
+    """Farmer accepts a pending purchase order."""
+    try:
+        clean_order_id = str(order_id).replace("#", "").strip()
+        order = db.get_by_id("orders", clean_order_id)
+        if not order:
+            all_orders = db.get_all("orders") or []
+            order = next((o for o in all_orders if isinstance(o, dict) and (o.get("id") == clean_order_id or str(o.get("id")) == str(order_id))), None)
+
+        if not order:
+            return jsonify({"error": "Order not found"}), 404
+
+        target_id = order.get("id", clean_order_id)
+        updated = db.update("orders", target_id, {
+            "status": "confirmed",
+            "paymentStatus": "escrow_secured"
+        })
+        return jsonify({"message": "Order accepted successfully", "order": updated or order}), 200
+    except Exception as e:
+        return jsonify({"error": f"Failed to accept order: {str(e)}"}), 500
+
+
+@order_bp.route("/<order_id>/reject", methods=["POST"])
+@auth_required
+@require_role("farmer", "admin")
+def reject_order(order_id):
+    """Farmer rejects a pending purchase order and refunds quantity back to produce listing."""
+    try:
+        clean_order_id = str(order_id).replace("#", "").strip()
+        order = db.get_by_id("orders", clean_order_id)
+        if not order:
+            all_orders = db.get_all("orders") or []
+            order = next((o for o in all_orders if isinstance(o, dict) and (o.get("id") == clean_order_id or str(o.get("id")) == str(order_id))), None)
+
+        if not order:
+            return jsonify({"error": "Order not found"}), 404
+
+        target_id = order.get("id", clean_order_id)
+        updated = db.update("orders", target_id, {
+            "status": "rejected",
+            "paymentStatus": "refunded"
+        })
+
+        # Restore produce quantity
+        produce_id = order.get("produceId")
+        if produce_id:
+            prod = db.get_by_id("produce", produce_id)
+            if prod:
+                restored_qty = float(prod.get("quantityKg", 0)) + float(order.get("quantityKg", 0))
+                db.update("produce", produce_id, {
+                    "quantityKg": restored_qty,
+                    "status": "listed"
+                })
+
+        return jsonify({"message": "Order rejected and quantity restored to marketplace", "order": updated or order}), 200
+    except Exception as e:
+        return jsonify({"error": f"Failed to reject order: {str(e)}"}), 500
+
 
 
 @order_bp.route("/mine", methods=["GET"])
@@ -159,9 +222,10 @@ def update_order_status(order_id):
             if role not in ["buyer", "farmer"]:
                 return jsonify({"error": "Not authorized to update this order"}), 403
 
-        valid_statuses = ["confirmed", "dispatched", "delivered", "cancelled"]
+        valid_statuses = ["pending_approval", "confirmed", "dispatched", "delivered", "rejected", "cancelled"]
         if new_status not in valid_statuses:
             return jsonify({"error": f"Invalid status. Must be one of: {', '.join(valid_statuses)}"}), 400
+
 
         updates = {"status": new_status}
 

@@ -44,8 +44,10 @@
         <li><a href="#admin" id="navAdmin" class="nav-link" onclick="app.navigate('admin')" style="display:none;">⚙️ Admin Center</a></li>
         <li><a href="#prices" id="navPriceRadar" class="nav-link" onclick="app.navigate('prices')"
             data-i18n="navPriceRadar">📊 Price Radar</a></li>
+        <li><a href="#support" id="navSupport" class="nav-link" onclick="app.navigate('support')" style="display:none;">💬 Support</a></li>
       </ul>
     </nav>
+
 
     <div class="nav-actions">
       <!-- Language Selector -->
@@ -444,7 +446,84 @@
       </div>
     </section>
 
+    <!-- ========================================== -->
+    <!-- VIEW: Ministry Support & Grievance Dashboard -->
+    <!-- ========================================== -->
+    <section id="supportView" class="view-section" style="display:none;">
+      <div class="view-header">
+        <div class="view-title">
+          <h2>🏛️ Ministry Support & Grievance Portal</h2>
+          <p>Raise grievances directly to the Ministry of Agriculture for escrow disputes, delivery delays, or produce quality concerns.</p>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px; margin-top: 20px;">
+        <!-- Support Ticket Creation Card -->
+        <div class="dash-card">
+          <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--primary); margin-bottom: 16px;">
+            📝 Submit Grievance / Raise Ticket
+          </h3>
+          <form id="supportTicketForm" onsubmit="event.preventDefault(); app.submitSupportTicket();">
+            <div class="form-group">
+              <label class="form-label">Issue Category</label>
+              <select id="ticketCategory" class="form-select" required>
+                <option value="Escrow & Payment Dispute">💰 Escrow & Payment Dispute</option>
+                <option value="Delivery Delay / Logistics">🚛 Delivery Delay / Logistics</option>
+                <option value="Produce Quality & Mismatch">🌾 Produce Quality & Grade Mismatch</option>
+                <option value="Farmer & Buyer Conduct">🤝 Conduct & Communication</option>
+                <option value="General Query">❓ General Technical Query</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Subject</label>
+              <input type="text" id="ticketSubject" class="form-input" placeholder="Brief summary of your grievance" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Related Order ID (Optional)</label>
+              <input type="text" id="ticketOrderId" class="form-input" placeholder="e.g. ord-21f2d19e" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Detailed Description</label>
+              <textarea id="ticketDescription" class="form-textarea" rows="4" placeholder="Explain the issue in detail for Ministry review..." required></textarea>
+            </div>
+            <button type="submit" id="submitTicketBtn" class="btn btn-primary" style="width: 100%;">
+              🏛️ Submit Grievance to Ministry
+            </button>
+          </form>
+        </div>
+
+        <!-- Raised Tickets History & Ministry Resolution Table -->
+        <div class="dash-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--text-dark);">
+              📜 My Grievances & Ministry Resolution Status
+            </h3>
+            <button class="btn btn-outline btn-sm" onclick="app.loadSupportTickets()">🔄 Refresh</button>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Ticket ID</th>
+                  <th>Category</th>
+                  <th>Subject</th>
+                  <th>Order ID</th>
+                  <th>Status</th>
+                  <th>Ministry Response</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody id="supportTicketsBody">
+                <tr><td colspan="7" style="text-align:center; color:var(--text-dim); padding:20px;">Loading support grievances...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
   </main>
+
 
   <!-- ========================================== -->
   <!-- MODAL: Order / Escrow Checkout             -->

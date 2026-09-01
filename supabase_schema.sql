@@ -126,8 +126,19 @@ CREATE TABLE IF NOT EXISTS public.demand_forecasts (
     forecast_date DATE,
     predicted_quantity NUMERIC,
     created_at TIMESTAMPTZ DEFAULT NOW()
+);CREATE TABLE IF NOT EXISTS public.support_tickets (
+    id TEXT PRIMARY KEY,
+    user_id TEXT REFERENCES public.users(id) ON DELETE CASCADE,
+    user_name TEXT NOT NULL,
+    user_role TEXT NOT NULL,
+    order_id TEXT,
+    category TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    description TEXT NOT NULL,
+    status TEXT DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved')),
+    admin_response TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
-
 
 -- ALLOW PUBLIC ANONYMOUS / SERVICE ACCESS POLICIES
 CREATE POLICY "Allow public read users" ON public.users FOR SELECT USING (true);
@@ -136,6 +147,9 @@ CREATE POLICY "Allow public read produce" ON public.produce FOR SELECT USING (tr
 CREATE POLICY "Allow public insert produce" ON public.produce FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow public read orders" ON public.orders FOR SELECT USING (true);
 CREATE POLICY "Allow public insert orders" ON public.orders FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public read support_tickets" ON public.support_tickets FOR SELECT USING (true);
+CREATE POLICY "Allow public insert support_tickets" ON public.support_tickets FOR INSERT WITH CHECK (true);
+
 
 -- INITIAL SEED DATA FOR MANDI PRICE RADAR
 INSERT INTO public.mandi_prices (id, commodity, mandi, price_per_kg, retail_price_per_kg)
