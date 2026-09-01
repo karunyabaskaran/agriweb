@@ -1192,13 +1192,33 @@ const app = {
 
     try {
       const all = await api.getProduce();
-      const myItems = (all || []).filter((p) => p.farmerPhone === auth.currentUser?.phone);
+      const user = auth.currentUser || {};
+      const userIdStr = String(user.id || "").trim();
+      const userPhoneStr = String(user.phone || "").trim();
+      const userNameStr = String(user.name || "").trim().toLowerCase();
+
+      const myItems = (all || []).filter((p) => {
+        if (!p) return false;
+        const pFarmerId = String(p.farmerId || "").trim();
+        const pFarmerPhone = String(p.farmerPhone || "").trim();
+        const pFarmerName = String(p.farmerName || "").trim().toLowerCase();
+
+        return (
+          (userIdStr && pFarmerId === userIdStr) ||
+          (userPhoneStr && pFarmerPhone === userPhoneStr) ||
+          (userNameStr && pFarmerName === userNameStr)
+        );
+      });
+
+      // Automatically refresh embedded incoming orders table
+      this.loadOrdersLedger();
 
       if (myItems.length === 0) {
         tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 30px; color:var(--text-dim);">You have not listed any products yet. Click "Post Product Lot" above to start selling!</td></tr>`;
         if (cardsGrid) cardsGrid.innerHTML = "";
         return;
       }
+
 
       tableBody.innerHTML = myItems
         .map(
@@ -1508,12 +1528,16 @@ const app = {
         }
       }
 
+      const farmerOrdersBody = document.getElementById("farmerOrdersBody");
+      const emptyMsg = `<tr><td colspan="8" style="text-align:center; color:var(--text-dim); padding:30px;">No direct orders placed yet. Browse Marketplace to order fresh products!</td></tr>`;
+
       if (this.allOrders.length === 0) {
-        ordersBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-dim); padding:30px;">No direct orders placed yet. Browse Marketplace to order fresh products!</td></tr>`;
+        if (ordersBody) ordersBody.innerHTML = emptyMsg;
+        if (farmerOrdersBody) farmerOrdersBody.innerHTML = emptyMsg;
         return;
       }
 
-      ordersBody.innerHTML = this.allOrders
+      const htmlContent = this.allOrders
         .map((o) => {
           const isFarmer = auth.getRole() === "farmer";
           const isPending = o.status === "pending_approval";
@@ -1609,9 +1633,16 @@ const app = {
           `;
         })
         .join("");
+
+      if (ordersBody) ordersBody.innerHTML = htmlContent;
+      if (farmerOrdersBody) farmerOrdersBody.innerHTML = htmlContent;
     } catch (e) {
-      ordersBody.innerHTML = `<tr><td colspan="8" style="color:var(--text-dim);">Error: ${e.message}</td></tr>`;
+      if (ordersBody) ordersBody.innerHTML = `<tr><td colspan="8" style="color:var(--text-dim);">Error: ${e.message}</td></tr>`;
+      const farmerOrdersBody = document.getElementById("farmerOrdersBody");
+      if (farmerOrdersBody) farmerOrdersBody.innerHTML = `<tr><td colspan="8" style="color:var(--text-dim);">Error: ${e.message}</td></tr>`;
     }
+  },
+
   },
 
 

@@ -73,9 +73,20 @@ def get_all_produce():
 @require_role("farmer")
 def get_my_produce():
     """Farmer views their own produce listings."""
-    items = db.get_all("produce")
-    mine = [p for p in items if p.get("farmerId") == g.user["id"]]
+    items = db.get_all("produce") or []
+    user_id = str(g.user.get("id", "")).strip()
+    user_phone = str(g.user.get("phone", "")).strip()
+    user_name = str(g.user.get("name", "")).strip().lower()
+
+    mine = [
+        p for p in items if isinstance(p, dict) and (
+            user_id == str(p.get("farmerId", "")) or
+            (user_phone and user_phone == str(p.get("farmerPhone", ""))) or
+            (user_name and user_name == str(p.get("farmerName", "")).lower())
+        )
+    ]
     return jsonify(mine), 200
+
 
 @produce_bp.route("/<item_id>", methods=["GET"])
 def get_produce_details(item_id):

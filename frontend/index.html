@@ -348,7 +348,38 @@
       <div id="myProductsCardsGrid" class="cards-grid" style="margin-top:24px;">
         <!-- Injected dynamically via app.js -->
       </div>
+
+      <!-- Embedded Incoming Buyer Orders & Approval Requests for Farmer -->
+      <div style="margin-top:36px; padding-top:24px; border-top:2px dashed var(--border-light);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <div>
+            <h3 style="font-size:1.25rem; font-weight:800; color:var(--primary);">📥 Incoming Buyer Orders & Approval Requests</h3>
+            <p style="font-size:0.88rem; color:var(--text-dim); margin-top:2px;">Approve buyer orders to initiate product shipment and secure escrow funds.</p>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="app.loadOrdersLedger()">🔄 Refresh Orders</button>
+        </div>
+        <div class="table-container">
+          <table class="radar-table">
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Product Details & Delivery</th>
+                <th>Farmer</th>
+                <th>Buyer</th>
+                <th>Quantity</th>
+                <th>Total Price (₹)</th>
+                <th>Status & Timeline</th>
+                <th>Approval Action</th>
+              </tr>
+            </thead>
+            <tbody id="farmerOrdersBody">
+              <tr><td colspan="8" style="text-align:center; color:var(--text-dim); padding:20px;">Loading incoming buyer orders...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </section>
+
 
     <!-- ========================================== -->
     <!-- VIEW 3: Orders Ledger (Buyers & Admin)     -->
