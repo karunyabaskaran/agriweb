@@ -108,6 +108,11 @@ class DatabaseManager:
         data = self._read_local()
         return data.get(collection_name, [])
 
+    def select(self, collection_name):
+        """Alias for get_all."""
+        return self.get_all(collection_name)
+
+
     def get_by_id(self, collection_name, item_id):
         """Returns a single item by ID or None."""
         if self.use_firebase and self.firestore_client:
