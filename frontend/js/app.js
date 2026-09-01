@@ -1191,27 +1191,37 @@ const app = {
     if (cardsGrid) cardsGrid.innerHTML = "";
 
     try {
-      const all = await api.getProduce();
-      const user = auth.currentUser || {};
-      const userIdStr = String(user.id || "").trim();
-      const userPhoneStr = String(user.phone || "").trim();
-      const userNameStr = String(user.name || "").trim().toLowerCase();
+      let myItems = [];
+      try {
+        myItems = await api.getMyProduce();
+      } catch (e) {
+        console.warn("api.getMyProduce fallback to api.getProduce()", e);
+      }
 
-      const myItems = (all || []).filter((p) => {
-        if (!p) return false;
-        const pFarmerId = String(p.farmerId || "").trim();
-        const pFarmerPhone = String(p.farmerPhone || "").trim();
-        const pFarmerName = String(p.farmerName || "").trim().toLowerCase();
+      if (!myItems || myItems.length === 0) {
+        const all = await api.getProduce();
+        const user = auth.currentUser || {};
+        const userIdStr = String(user.id || "").trim();
+        const userPhoneStr = String(user.phone || "").trim();
+        const userNameStr = String(user.name || "").trim().toLowerCase();
 
-        return (
-          (userIdStr && pFarmerId === userIdStr) ||
-          (userPhoneStr && pFarmerPhone === userPhoneStr) ||
-          (userNameStr && pFarmerName === userNameStr)
-        );
-      });
+        myItems = (all || []).filter((p) => {
+          if (!p) return false;
+          const pFarmerId = String(p.farmerId || "").trim();
+          const pFarmerPhone = String(p.farmerPhone || "").trim();
+          const pFarmerName = String(p.farmerName || "").trim().toLowerCase();
+
+          return (
+            (userIdStr && pFarmerId === userIdStr) ||
+            (userPhoneStr && pFarmerPhone === userPhoneStr) ||
+            (userNameStr && pFarmerName === userNameStr)
+          );
+        });
+      }
 
       // Automatically refresh embedded incoming orders table
       this.loadOrdersLedger();
+
 
       if (myItems.length === 0) {
         tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 30px; color:var(--text-dim);">You have not listed any products yet. Click "Post Product Lot" above to start selling!</td></tr>`;
@@ -1867,13 +1877,17 @@ const app = {
       });
 
       this.closeModal("createProduceModal");
-      showToast("Product listed in Marketplace successfully!");
-      this.refreshCurrentView();
+      showToast("🌱 Product listed in Marketplace successfully!", "success");
+
+      // Auto-navigate to Farmer's Listed Products Inventory view & load inventory
+      this.navigate("my-products");
+      this.loadMyProducts();
       if (auth.isLoggedIn()) this.renderDashboardSummary();
     } catch (e) {
       showToast(e.message, "error");
     }
   },
+
 
   // ----------------------------------------------------
   // Auth Form Controls
