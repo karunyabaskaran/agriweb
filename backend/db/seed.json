@@ -1,0 +1,17 @@
+{
+  "users": [],
+  "produce": [],
+  "orders": [],
+  "pools": [],
+  "advances": [],
+  "mandiPrices": [
+    { "commodity": "Tomato", "mandi": "Koyambedu, Chennai", "state": "Tamil Nadu", "pricePerKg": 18, "retailPricePerKg": 42, "updatedAt": "2026-08-30" },
+    { "commodity": "Onion", "mandi": "Lasalgaon, Nashik", "state": "Maharashtra", "pricePerKg": 14, "retailPricePerKg": 34, "updatedAt": "2026-08-30" },
+    { "commodity": "Potato", "mandi": "Agra Mandi", "state": "Uttar Pradesh", "pricePerKg": 10, "retailPricePerKg": 26, "updatedAt": "2026-08-30" },
+    { "commodity": "Wheat", "mandi": "Karnal Mandi", "state": "Haryana", "pricePerKg": 22, "retailPricePerKg": 38, "updatedAt": "2026-08-30" },
+    { "commodity": "Rice", "mandi": "Kurnool Mandi", "state": "Andhra Pradesh", "pricePerKg": 28, "retailPricePerKg": 52, "updatedAt": "2026-08-30" },
+    { "commodity": "Banana", "mandi": "Koyambedu, Chennai", "state": "Tamil Nadu", "pricePerKg": 12, "retailPricePerKg": 30, "updatedAt": "2026-08-30" },
+    { "commodity": "Brinjal", "mandi": "Koyambedu, Chennai", "state": "Tamil Nadu", "pricePerKg": 15, "retailPricePerKg": 36, "updatedAt": "2026-08-30" },
+    { "commodity": "Cauliflower", "mandi": "Azadpur, Delhi", "state": "Delhi", "pricePerKg": 13, "retailPricePerKg": 32, "updatedAt": "2026-08-30" }
+  ]
+}

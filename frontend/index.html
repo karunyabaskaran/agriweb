@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AGRIWEB — Direct Farm-to-Market Platform</title>
+  <meta name="description"
+    content="AGRIWEB connects farmers directly to consumers and bulk vendors. Simple, transparent agricultural marketplace.">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+  <!-- Main Navigation Bar -->
+  <header class="navbar">
+    <div class="brand-section">
+      <a href="#marketplace" class="brand-title" onclick="app.navigate('marketplace')">AGRIWEB</a>
+      <span id="navRoleIndicator" class="role-indicator">👤 Visitor / Guest Mode</span>
+    </div>
+
+    <!-- Mobile Hamburger Toggle -->
+    <button class="hamburger-btn" onclick="app.toggleMobileMenu()" aria-label="Toggle navigation menu">
+      ☰
+    </button>
+
+    <nav>
+      <ul id="navLinks" class="nav-links">
+        <li><a href="#marketplace" id="navMarketplace" class="nav-link active" onclick="app.navigate('marketplace')"
+            data-i18n="navMarketplace">🛒 Marketplace</a></li>
+        <li><a href="#my-products" id="navMyProducts" class="nav-link" onclick="app.navigate('my-products')"
+            data-i18n="navMyProducts" style="display:none;">📦 My Listed Products</a></li>
+        <li><a href="#orders" id="navMyOrders" class="nav-link" onclick="app.navigate('orders')" data-i18n="navMyOrders"
+            style="display:none;">📋 Direct Orders</a></li>
+        <li><a href="#admin" id="navAdmin" class="nav-link" onclick="app.navigate('admin')" style="display:none;">⚙️ Admin Center</a></li>
+        <li><a href="#prices" id="navPriceRadar" class="nav-link" onclick="app.navigate('prices')"
+            data-i18n="navPriceRadar">📊 Price Radar</a></li>
+      </ul>
+    </nav>
+
+    <div class="nav-actions">
+      <!-- Language Selector -->
+      <select id="languageSelect" class="lang-select" onchange="app.changeLanguage(this.value)">
+        <option value="en">🌐 English</option>
+        <option value="hi">🌐 हिन्दी (Hindi)</option>
+        <option value="mr">🌐 मराठी (Marathi)</option>
+        <option value="ta">🌐 தமிழ் (Tamil)</option>
+        <option value="te">🌐 తెలుగు (Telugu)</option>
+      </select>
+
+      <!-- Farmer Add Product Shortcut (Only shown when role is farmer) -->
+      <button id="navPostProduceBtn" class="btn btn-primary btn-sm" onclick="app.openModal('createProduceModal')"
+        data-i18n="btnPostProduce" style="display:none;">
+        ➕ Post Product Lot
+      </button>
+
+      <!-- User Chip -->
+      <div id="userChip" class="user-chip" style="display:none;">
+        <span id="userName" style="font-weight:700;">User</span>
+        <span id="userRole" class="user-role-badge">FARMER</span>
+        <button onclick="auth.logout()"
+          style="background:transparent; border:none; color:var(--text-dim); font-size:1.1rem; cursor:pointer; font-weight:700;"
+          title="Sign Out">✖</button>
+      </div>
+
+      <!-- Sign In Button -->
+      <button id="loginBtn" class="btn btn-outline btn-sm" onclick="app.navigate('auth')" data-i18n="btnSignIn">
+        Sign In / Register
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-container">
+
+    <!-- Dashboard Summary Overview (Suggestion E) -->
+    <div id="dashboardSummary" class="dashboard-stats" style="display:none;">
+      <!-- Populated dynamically via app.js -->
+    </div>
+
+    <!-- ========================================== -->
+    <!-- VIEW 0: Authentication View (Full Page)    -->
+    <!-- ========================================== -->
+    <section id="auth" class="view-section">
+      <div class="auth-wrapper">
+        <div class="auth-header">
+          <h2 id="authTitle" class="auth-title" data-i18n="authTitle">Sign In to AGRIWEB</h2>
+          <p id="authDesc" class="auth-desc" data-i18n="authDesc">Choose your role and enter your details to continue.</p>
+        </div>
+
+        <!-- Role Selection -->
+        <div class="role-selector-grid">
+          <div id="roleChoiceFarmer" class="role-choice-btn selected" onclick="app.selectAuthRole('farmer')">
+            <div class="role-choice-icon">👨‍🌾</div>
+            <div class="role-choice-name" data-i18n="roleFarmer">Farmer</div>
+          </div>
+          <div id="roleChoiceBuyer" class="role-choice-btn" onclick="app.selectAuthRole('buyer')">
+            <div class="role-choice-icon">🛒</div>
+            <div class="role-choice-name" data-i18n="roleConsumer">Direct Buyer</div>
+          </div>
+          <div id="roleChoiceAdmin" class="role-choice-btn" onclick="app.selectAuthRole('admin')">
+            <div class="role-choice-icon">🏛️</div>
+            <div class="role-choice-name" data-i18n="roleAdmin">Admin</div>
+          </div>
+        </div>
+
+        <!-- Quick Demo Accounts -->
+        <div
+          style="background: var(--bg-dark); border: 2px solid var(--border-light); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 20px;">
+          <div
+            style="font-weight: 700; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase;"
+            data-i18n="quickDemo">⚡ Quick Test Accounts (Password: password123)</div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="app.fillDemoAuth('9876543210', 'farmer')"
+              style="justify-content: flex-start; padding: 6px 12px; font-size: 0.85rem; width: 100%;">
+              👨‍🌾 Farmer: 9876543210
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="app.fillDemoAuth('9123456780', 'buyer')"
+              style="justify-content: flex-start; padding: 6px 12px; font-size: 0.85rem; width: 100%;">
+              🛒 Direct Buyer: 9123456780
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="app.fillDemoAuth('9998887770', 'admin')"
+              style="justify-content: flex-start; padding: 6px 12px; font-size: 0.85rem; width: 100%;">
+              🏛️ Admin: 9998887770
+            </button>
+          </div>
+        </div>
+
+        <!-- Authentication Form -->
+        <form id="authMainForm" onsubmit="app.handleAuthSubmit(event)">
+          <div id="authRegisterFields" style="display:none;">
+            <div class="form-group">
+              <label class="form-label" data-i18n="lblName">Your Full Name / Business Name</label>
+              <input type="text" id="authName" class="form-input" placeholder="e.g. Ramesh Kumar">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" data-i18n="lblVillage">Village / City Hub</label>
+              <input type="text" id="authVillage" class="form-input" placeholder="e.g. Dindori, Nashik">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" data-i18n="lblState">State</label>
+              <input type="text" id="authState" class="form-input" placeholder="e.g. Maharashtra">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" data-i18n="lblPhone">Phone Number (10 Digits)</label>
+            <input type="tel" id="authPhone" class="form-input" placeholder="e.g. 9876543210" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" data-i18n="lblPassword">Password</label>
+            <input type="password" id="authPassword" class="form-input" placeholder="Enter password" required>
+          </div>
+
+          <button type="submit" id="authSubmitBtn" class="btn btn-primary" style="width:100%; margin-top:8px;"
+            data-i18n="btnSignIn">
+            Sign In
+          </button>
+        </form>
+
+        <div style="text-align:center; margin-top:20px; font-size:0.92rem; color:var(--text-muted);">
+          <span id="authToggleText" data-i18n="authToggleText">Don't have an account?</span>
+          <a href="javascript:void(0)" id="authToggleLink" onclick="app.toggleAuthMode()"
+            style="font-weight:700; margin-left:4px;" data-i18n="authToggleLink">
+            Register Now
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 1: Products Marketplace               -->
+    <!-- ========================================== -->
+    <section id="marketplace" class="view-section active">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title" data-i18n="marketTitle">🛒 Agricultural Products Marketplace</h2>
+          <p class="section-subtitle" data-i18n="marketSubtitle">Buy fresh agricultural products directly from verified farmers with transparent prices.</p>
+        </div>
+        <div>
+          <button id="postProduceMarketBtn" class="btn btn-primary" onclick="app.openModal('createProduceModal')"
+            data-i18n="btnPostProduce" style="display:none;">
+            ➕ Post Product Lot
+          </button>
+        </div>
+      </div>
+
+      <!-- Filters & Sort Toolbar -->
+      <div class="toolbar">
+        <div class="search-input-group">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchProduce" class="search-input" placeholder="Search products..."
+            data-i18n-placeholder="searchPlaceholder" oninput="app.loadMarketplace()">
+        </div>
+
+        <select id="filterCommodity" class="filter-select" onchange="app.loadMarketplace()">
+          <option value="" data-i18n="optAllCommodities">All Products</option>
+          <option value="Tomato">🍅 Tomato</option>
+          <option value="Onion">🧅 Onion</option>
+          <option value="Potato">🥔 Potato</option>
+          <option value="Wheat">🌾 Wheat</option>
+          <option value="Rice">🍚 Rice</option>
+          <option value="Banana">🍌 Banana</option>
+          <option value="Brinjal">🍆 Brinjal</option>
+          <option value="Green Chilli">🌶️ Green Chilli</option>
+          <option value="Soyabean">🌱 Soyabean</option>
+        </select>
+
+        <select id="filterGrade" class="filter-select" onchange="app.loadMarketplace()">
+          <option value="" data-i18n="optAllGrades">All Grades</option>
+          <option value="A" data-i18n="optGradeA">Grade A (Premium)</option>
+          <option value="B" data-i18n="optGradeB">Grade B (Standard)</option>
+          <option value="C" data-i18n="optGradeC">Grade C (Processing)</option>
+        </select>
+
+        <select id="filterState" class="filter-select" onchange="app.loadMarketplace()">
+          <option value="" data-i18n="optAllStates">All States</option>
+          <option value="Maharashtra">Maharashtra</option>
+          <option value="Uttar Pradesh">Uttar Pradesh</option>
+          <option value="Tamil Nadu">Tamil Nadu</option>
+          <option value="Madhya Pradesh">Madhya Pradesh</option>
+          <option value="Punjab">Punjab</option>
+          <option value="Karnataka">Karnataka</option>
+        </select>
+
+        <!-- Sorting feature (Low to High, High to Low, Ratings) -->
+        <select id="sortProduce" class="filter-select" onchange="app.loadMarketplace()">
+          <option value="" data-i18n="optSortDefault">Sort By: Featured</option>
+          <option value="price_asc" data-i18n="optPriceAsc">Price: Low to High</option>
+          <option value="price_desc" data-i18n="optPriceDesc">Price: High to Low</option>
+          <option value="rating_desc" data-i18n="optRatingDesc">Rating: High to Low</option>
+          <option value="quantity_desc" data-i18n="optQtyDesc">Quantity: High to Low</option>
+        </select>
+      </div>
+
+      <!-- Products Grid -->
+      <div id="produceGrid" class="cards-grid">
+        <!-- Injected dynamically via app.js -->
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 2: My Listed Products (Farmer Only)   -->
+    <!-- ========================================== -->
+    <section id="my-products" class="view-section">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title" data-i18n="myProductsTitle">📦 My Listed Products</h2>
+          <p class="section-subtitle" data-i18n="myProductsDesc">Manage your farm products. Add new items or remove listings easily.</p>
+        </div>
+        <button class="btn btn-primary" onclick="app.openModal('createProduceModal')" data-i18n="btnPostProduce">
+          ➕ Post Product Lot
+        </button>
+      </div>
+
+      <div class="table-container">
+        <table class="radar-table">
+          <thead>
+            <tr>
+              <th data-i18n="thCommodity">Product Name</th>
+              <th data-i18n="lblVariety">Variety</th>
+              <th data-i18n="lblGrade">Grade</th>
+              <th data-i18n="lblQuantity">Available Quantity (kg)</th>
+              <th data-i18n="lblAskingPrice">Direct Price (₹/kg)</th>
+              <th data-i18n="thRegion">Location</th>
+              <th data-i18n="thAction">Action</th>
+            </tr>
+          </thead>
+          <tbody id="myProductsTableBody">
+            <!-- Injected dynamically via app.js -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Farmer's Product Details Cards Grid -->
+      <div id="myProductsCardsGrid" class="cards-grid" style="margin-top:24px;">
+        <!-- Injected dynamically via app.js -->
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 3: Orders Ledger (Buyers & Admin)     -->
+    <!-- ========================================== -->
+    <section id="orders" class="view-section">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title" data-i18n="ordersTitle">📋 Direct Orders & Escrow Ledger</h2>
+          <p class="section-subtitle" data-i18n="ordersSubtitle">Track delivery milestones, verify quality, and view payment security status.</p>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="radar-table">
+          <thead>
+            <tr>
+              <th data-i18n="thOrderId">Order ID</th>
+              <th data-i18n="thOrderProduce">Product Details</th>
+              <th data-i18n="thOrderFarmer">Farmer</th>
+              <th data-i18n="thOrderBuyer">Buyer</th>
+              <th data-i18n="thOrderQty">Quantity</th>
+              <th data-i18n="thOrderTotal">Total Price (₹)</th>
+              <th data-i18n="thOrderEscrow">Payment Status & Timeline</th>
+              <th data-i18n="thOrderAction">Action</th>
+            </tr>
+          </thead>
+          <tbody id="buyerOrdersBody">
+            <!-- Injected dynamically via app.js -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 4: Admin Center (Price Reg)           -->
+    <!-- ========================================== -->
+    <section id="admin" class="view-section" style="display:none;">
+      <div class="view-header">
+        <div class="header-titles">
+          <h2 class="view-title">⚙️ Admin Command Center</h2>
+          <p class="view-subtitle">Regulate prices and monitor sales across states</p>
+        </div>
+      </div>
+      <div class="card" style="max-width:600px;">
+        <h3>Set Global Price Cap</h3>
+        <p style="color:var(--text-dim); margin-bottom:16px;">Prevent hoarding by capping the max price farmers can list.</p>
+        <div class="form-group">
+          <label class="form-label">Commodity</label>
+          <select id="adminCapCommodity" class="form-input">
+            <option value="Tomato">Tomato</option>
+            <option value="Onion">Onion</option>
+            <option value="Potato">Potato</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Max Price (₹/kg)</label>
+          <input type="number" id="adminCapPrice" class="form-input" placeholder="e.g. 80">
+        </div>
+        <button class="btn btn-primary" onclick="app.setAdminPriceCap()">🔒 Enforce Price Cap</button>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 5: Price Radar (Analytics)            -->
+    <!-- ========================================== -->
+    <section id="prices" class="view-section" style="display:none;">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title" data-i18n="pricesTitle">📊 Price Radar</h2>
+          <p class="section-subtitle" data-i18n="pricesSubtitle">Real-time comparison: Mandi Wholesale vs AGRIWEB Direct Farmer vs Urban Retail Prices</p>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="radar-table">
+          <thead>
+            <tr>
+              <th data-i18n="thCommodity">Product & Hub</th>
+              <th data-i18n="thMandi">Mandi Wholesale Rate</th>
+              <th data-i18n="thDirect">AGRIWEB Direct Ask</th>
+              <th data-i18n="thRetail">Urban Retail Rate</th>
+              <th data-i18n="thSpread">Market Spread</th>
+              <th data-i18n="thUplift">Farmer Benefit</th>
+            </tr>
+          </thead>
+          <tbody id="radarTableBody">
+            <!-- Injected dynamically via app.js -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Chart Container -->
+      <div style="background:var(--bg-card); border:2px solid var(--border-light); border-radius:var(--radius-lg); padding:24px; margin-top:28px; height:360px;">
+        <canvas id="priceRadarChart"></canvas>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- MODAL: Order / Escrow Checkout             -->
+  <!-- ========================================== -->
+  <div id="orderModal" class="modal-overlay">
+    <div class="modal-box">
+      <button class="modal-close" onclick="app.closeModal('orderModal')">✖</button>
+      <h3 id="orderModalTitle" style="font-size:1.35rem; font-weight:800; margin-bottom:14px;"
+        data-i18n="orderModalTitle">Direct Farm Purchase</h3>
+
+      <div
+        style="background:var(--bg-dark); padding:16px; border-radius:8px; border:1px solid var(--border-light); margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; font-size:0.95rem; margin-bottom:6px;">
+          <span style="color:var(--text-muted);" data-i18n="lblDirectAsk">Direct Asking Price:</span>
+          <span id="orderModalPrice" style="font-weight:800; color:var(--text-main);">₹-- / kg</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.95rem;">
+          <span style="color:var(--text-muted);" data-i18n="lblAvailQty">Available Quantity:</span>
+          <span id="orderModalMaxQty" style="font-weight:700;">-- kg</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" data-i18n="lblOrderQty">Order Quantity (kg)</label>
+        <input type="number" id="orderQtyInput" class="form-input" min="10" value="100"
+          oninput="app.updateOrderSummary()">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" data-i18n="lblPaymentMode">Payment & Escrow Protection</label>
+        <select class="form-select">
+          <option value="upi">UPI / Instant Bank Escrow</option>
+          <option value="card">Corporate Card / NEFT</option>
+        </select>
+      </div>
+
+      <!-- Summary -->
+      <div style="border-top:1.5px solid var(--border-light); padding-top:12px; margin-top:12px; margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; font-size:0.95rem; margin-bottom:6px;">
+          <span style="color:var(--text-muted);" data-i18n="lblProduceCost">Product Cost:</span>
+          <span id="orderModalTotal" style="font-weight:700;">₹0.00</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.95rem; margin-bottom:8px;">
+          <span style="color:var(--text-muted);" data-i18n="lblFreightCost">Direct Freight Estimate (~6%):</span>
+          <span id="orderModalFreight" style="font-weight:700;">₹0.00</span>
+        </div>
+        <div
+          style="display:flex; justify-content:space-between; font-size:1.25rem; font-weight:900; color:var(--text-main); padding-top:8px; border-top:2px dashed var(--border-light);">
+          <span data-i18n="lblGrandTotal">Grand Total:</span>
+          <span id="orderModalGrandTotal">₹0.00</span>
+        </div>
+      </div>
+
+      <div
+        style="background:var(--success-bg); border-left:4px solid var(--success); padding:10px 14px; border-radius:6px; font-size:0.85rem; margin-bottom:16px; color:var(--success);"
+        data-i18n="lblEscrowSecurity">
+        🔒 <strong>100% Escrow Protected:</strong> Funds are locked in safe escrow and only released to the farmer after
+        you verify product arrival.
+      </div>
+
+      <button id="orderConfirmBtn" class="btn btn-primary" style="width:100%;" onclick="app.confirmOrder()"
+        data-i18n="btnAuthorizeEscrow">
+        💳 Authorize Escrow & Place Direct Order
+      </button>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: Post Product Listing (Add Product)  -->
+  <!-- ========================================== -->
+  <div id="createProduceModal" class="modal-overlay">
+    <div class="modal-box">
+      <button class="modal-close" onclick="app.closeModal('createProduceModal')">✖</button>
+      <h3 style="font-size:1.35rem; font-weight:800; margin-bottom:18px;" data-i18n="modalPostProduce">Post Product to
+        Marketplace</h3>
+
+      <div class="form-group">
+        <label class="form-label" data-i18n="lblCommodity">Product Name</label>
+        <select id="postCommodity" class="form-select">
+          <option value="Tomato">🍅 Tomato</option>
+          <option value="Onion">🧅 Onion</option>
+          <option value="Potato">🥔 Potato</option>
+          <option value="Wheat">🌾 Wheat</option>
+          <option value="Rice">🍚 Rice</option>
+          <option value="Banana">🍌 Banana</option>
+          <option value="Brinjal">🍆 Brinjal</option>
+          <option value="Green Chilli">🌶️ Green Chilli</option>
+          <option value="Soyabean">🌱 Soyabean</option>
+        </select>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group">
+          <label class="form-label" data-i18n="lblVariety">Variety</label>
+          <input type="text" id="postVariety" class="form-input" placeholder="e.g. Hybrid / Desi">
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="lblGrade">Quality Grade</label>
+          <select id="postGrade" class="form-select">
+            <option value="A">Grade A (Premium)</option>
+            <option value="B">Grade B (Standard)</option>
+            <option value="C">Grade C (Processing)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group">
+          <label class="form-label" data-i18n="lblQuantity">Available Quantity (kg)</label>
+          <input type="number" id="postQuantity" class="form-input" placeholder="e.g. 1500" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="lblAskingPrice">Direct Price (₹/kg)</label>
+          <input type="number" id="postPrice" class="form-input" placeholder="e.g. 24.50" step="0.5" required>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="form-group">
+          <label class="form-label" data-i18n="lblVillage">Village / Location</label>
+          <input type="text" id="postVillage" class="form-input" placeholder="e.g. Dindori, Nashik">
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="lblState">State</label>
+          <input type="text" id="postState" class="form-input" placeholder="e.g. Maharashtra">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" data-i18n="lblProductImage">Product Image (Optional)</label>
+        <input type="file" id="postImage" class="form-input" accept="image/*">
+      </div>
+
+      <button class="btn btn-primary" style="width:100%; margin-top:8px;" onclick="app.submitCreateProduce()"
+        data-i18n="btnPublishProduce">
+        🌱 Publish Listing Directly
+      </button>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: Rate Quality & Farmer Trust Score   -->
+  <!-- ========================================== -->
+  <div id="rateModal" class="modal-overlay">
+    <div class="modal-box">
+      <button class="modal-close" onclick="app.closeModal('rateModal')">✖</button>
+      <h3 style="font-size:1.25rem; margin-bottom:14px;" data-i18n="modalRateTitle">Confirm Quality & Rate Farmer</h3>
+      <input type="hidden" id="rateOrderId">
+
+      <div class="form-group">
+        <label class="form-label" data-i18n="lblConfirmedGrade">Confirmed Delivery Quality Grade</label>
+        <select id="rateGrade" class="form-select">
+          <option value="A">Grade A (Exceeded Expectations / Crisp)</option>
+          <option value="B">Grade B (Standard Commercial Grade)</option>
+          <option value="C">Grade C (Minor Defect / Processing)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" data-i18n="lblTrustScore">Farmer Trust Rating (1 to 5 Stars)</label>
+        <select id="rateScore" class="form-select">
+          <option value="5">⭐⭐⭐⭐⭐ 5 Stars (Outstanding Quality)</option>
+          <option value="4">⭐⭐⭐⭐ 4 Stars (Good Quality)</option>
+          <option value="3">⭐⭐⭐ 3 Stars (Satisfactory)</option>
+          <option value="2">⭐⭐ 2 Stars (Below Standard)</option>
+          <option value="1">⭐ 1 Star (Dispute)</option>
+        </select>
+      </div>
+
+      <button class="btn btn-primary" style="width:100%; margin-top:8px;" onclick="app.submitOrderRating()"
+        data-i18n="btnSubmitRating">
+        ⭐ Submit Rating & Update Trust Score
+      </button>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: Product All Details & Market Specs  -->
+  <!-- ========================================== -->
+  <div id="productDetailsModal" class="modal-overlay">
+    <div class="modal-box modal-box-large">
+      <button class="modal-close" onclick="app.closeModal('productDetailsModal')">✖</button>
+      <div id="productDetailsContent">
+        <!-- Injected dynamically via app.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- External Libraries (Chart JS) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Application Modules -->
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+
+</html>
