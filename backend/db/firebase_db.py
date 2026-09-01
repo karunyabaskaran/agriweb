@@ -65,8 +65,15 @@ class DatabaseManager:
         """Seeds the database with realistic sample Indian agro-market data."""
         seed = get_initial_seed_data()
         with self.mem_lock:
-            with open(self.db_path, "w", encoding="utf-8") as f:
-                json.dump(seed, f, indent=2)
+            try:
+                os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+                with open(self.db_path, "w", encoding="utf-8") as f:
+                    json.dump(seed, f, indent=2)
+            except (PermissionError, OSError):
+                import tempfile
+                self.db_path = os.path.join(tempfile.gettempdir(), "agriweb_db.json")
+                with open(self.db_path, "w", encoding="utf-8") as f:
+                    json.dump(seed, f, indent=2)
         print("Initialized database with seed dataset.")
 
     def _read_local(self):
@@ -80,8 +87,14 @@ class DatabaseManager:
 
     def _write_local(self, data):
         with self.mem_lock:
-            with open(self.db_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2)
+            try:
+                with open(self.db_path, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=2)
+            except (PermissionError, OSError):
+                import tempfile
+                self.db_path = os.path.join(tempfile.gettempdir(), "agriweb_db.json")
+                with open(self.db_path, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=2)
 
     def get_all(self, collection_name):
         """Returns all items in a collection."""

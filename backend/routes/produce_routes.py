@@ -93,10 +93,10 @@ def create_produce():
     data = request.get_json() or {}
     commodity = data.get("commodity")
     quantity_kg = data.get("quantityKg")
-    asking_price = data.get("askingPricePerKg")
+    asking_price = data.get("askingPricePerKg") if data.get("askingPricePerKg") is not None else data.get("directPricePerKg")
     variety = data.get("variety", "Standard Hybrid")
     grade = data.get("grade", "A")
-    village = data.get("village")
+    village = data.get("village") or data.get("location")
     state = data.get("state")
     harvest_date = data.get("harvestDate")
     shelf_life_days = data.get("shelfLifeDays", 10)
@@ -104,7 +104,7 @@ def create_produce():
     lng = data.get("lng")
 
     if not commodity or quantity_kg is None or asking_price is None:
-        return jsonify({"error": "commodity, quantityKg, and askingPricePerKg are required"}), 400
+        return jsonify({"error": "commodity, quantityKg, and askingPricePerKg (or directPricePerKg) are required"}), 400
 
     # Enforce Price Cap (Admin Phase 5)
     cap_id = f"cap_{commodity.strip().lower()}"

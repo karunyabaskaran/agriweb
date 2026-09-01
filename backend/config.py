@@ -29,4 +29,9 @@ class Config:
     # Paths
     BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
-    DB_FILE = os.path.join(os.path.dirname(__file__), "db", "db.json")
+    _default_db = os.path.join(os.path.dirname(__file__), "db", "db.json")
+    if os.getenv("FLASK_ENV") == "production" or os.getenv("RENDER") or os.getenv("VERCEL"):
+        import tempfile
+        DB_FILE = os.getenv("DB_FILE", os.path.join(tempfile.gettempdir(), "agriweb_db.json"))
+    else:
+        DB_FILE = os.getenv("DB_FILE", _default_db)
