@@ -1019,9 +1019,9 @@ const app = {
                   ? `<button class="btn btn-primary btn-sm" style="flex:1;" onclick="app.openOrderModal('${item.id}')">${t("btnBuyDirect", "⚡ Buy Directly")}</button>`
                   : `<button class="btn btn-outline btn-sm" style="flex:1; pointer-events:none;">🌱 Farmer Listing</button>`
               }
-              <a href="${whatsappUrl}" target="_blank" class="btn btn-primary btn-sm" style="flex: 1; background-color: var(--success); border-color: var(--success);" title="${t("btnShareWhatsapp", "Share on WhatsApp")}">
+              <button onclick="app.shareProduce('${item.id}')" class="btn btn-primary btn-sm" style="flex: 1; background-color: var(--success); border-color: var(--success);" title="${t("btnShareWhatsapp", "Share on WhatsApp")}">
                 🛒 Share
-              </a>
+              </button>
             </div>
           </div>
         `;
@@ -1153,9 +1153,9 @@ const app = {
               </button>`
             : `<span style="font-size:0.9rem; color:var(--text-dim); font-weight:700; flex:1;">🌱 Published in Marketplace</span>`
         }
-        <a href="${whatsappUrl}" target="_blank" class="btn-whatsapp" style="padding:10px 16px;">
+        <button onclick="app.shareProduce('${item.id}')" class="btn-whatsapp" style="padding:10px 16px;">
           ${t("btnShareWhatsapp", "📱 Share on WhatsApp")}
-        </a>
+        </button>
         <button class="btn btn-outline" onclick="app.closeModal('productDetailsModal')">
           Close
         </button>
@@ -1300,9 +1300,9 @@ const app = {
                   <button class="btn btn-danger btn-sm" style="flex:1;" onclick="app.deleteProduce('${item.id}')">
                     ✖ ${t("thAction", "Delete")}
                   </button>
-                  <a href="${whatsappUrl}" target="_blank" class="btn-whatsapp" title="${t("btnShareWhatsapp", "Share on WhatsApp")}">
+                  <button onclick="app.shareProduce('${item.id}')" class="btn-whatsapp" title="${t("btnShareWhatsapp", "Share on WhatsApp")}">
                     ${t("btnShareWhatsapp", "📱 Share")}
-                  </a>
+                  </button>
                 </div>
               </div>
             `;
@@ -1736,6 +1736,38 @@ const app = {
         submitBtn.disabled = false;
         submitBtn.textContent = origBtnText;
       }
+    }
+  },
+
+  shareProduce(itemId) {
+    const item = (this.allProduce || []).find((p) => p.id === itemId);
+    const commodity = item ? item.commodity : "Produce";
+    const askingPrice = item ? item.askingPricePerKg : "";
+    const farmerName = item ? item.farmerName : "";
+    const village = item ? item.village : "";
+    const state = item ? item.state : "";
+    const grade = item ? item.grade : "A";
+    const qty = item ? item.quantityKg : "";
+
+    const liveOrigin = window.location.origin.includes("localhost") || window.location.origin.includes("127.0.0.1")
+      ? "https://kisansetu-agriweb.onrender.com"
+      : window.location.origin;
+
+    const productUrl = `${liveOrigin}/?produceId=${itemId}`;
+    const shareMessage = `Check out fresh ${commodity} (Grade ${grade}) on AGRIWEB!\n\n💰 Direct Rate: ₹${askingPrice}/kg\n👨‍🌾 Farmer: ${farmerName} (${village}, ${state})\n📦 Available Qty: ${qty} kg\n\n👇 View & Order Product Link:\n${productUrl}`;
+
+    if (navigator.share) {
+      navigator.share({
+        title: `AGRIWEB - ${commodity} (${grade})`,
+        text: shareMessage,
+        url: productUrl
+      }).catch(() => {
+        const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
+        window.open(whatsappUrl, "_blank");
+      });
+    } else {
+      const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
+      window.open(whatsappUrl, "_blank");
     }
   },
 
