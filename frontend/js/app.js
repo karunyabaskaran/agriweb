@@ -1417,24 +1417,97 @@ const app = {
       const myOrders = await api.getMyOrders();
       this.allOrders = myOrders || [];
 
+      const isFarmer = auth.getRole() === "farmer";
+      const pendingOrders = this.allOrders.filter((o) => o.status === "pending");
+
+      // Render Farmer Notification Banner if pending orders exist
+      const container = document.getElementById("ordersNotificationContainer");
+      if (container) {
+        if (isFarmer && pendingOrders.length > 0) {
+          container.innerHTML = `
+            <div class="farmer-notification-banner" style="background:#FEFCBF; border:1px solid #ECC94B; color:#744210; padding:14px 18px; border-radius:10px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:1.5rem;">🔔</span>
+                <div>
+                  <strong style="font-size:1.05rem;">New Order Notification!</strong>
+                  <div style="font-size:0.9rem; opacity:0.9;">You have <strong>${pendingOrders.length} pending order(s)</strong> awaiting your acceptance/rejection below.</div>
+                </div>
+              </div>
+              <span class="grade-badge" style="background:#D69E2E; color:white; font-weight:800; font-size:0.85rem; padding:4px 10px;">Action Required</span>
+            </div>
+          `;
+        } else {
+          container.innerHTML = "";
+        }
+      }
+
       if (this.allOrders.length === 0) {
-        ordersBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-dim); padding:30px;">No direct orders placed yet. Browse Marketplace to order fresh products!</td></tr>`;
+        ordersBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-dim); padding:30px;">No direct orders found. Browse Marketplace to order fresh products!</td></tr>`;
         return;
       }
 
       ordersBody.innerHTML = this.allOrders
         .map((o) => {
-          const isFarmer = auth.getRole() === "farmer";
-          const canConfirmDelivery = !isFarmer && (o.status === "confirmed" || o.status === "dispatched");
-          const canRate = !isFarmer && o.status === "delivered";
-
           let statusText = "Safe Escrow Secured";
-          if (o.paymentStatus === "escrow_released") statusText = "Funds Released to Farmer";
+          let statusBg = "#4A5568";
 
-          // Stepper calculation (Suggestion C)
-          const isStep1 = true;
-          const isStep2 = o.status === "dispatched" || o.status === "delivered";
-          const isStep3 = o.status === "delivered";
+          if (o.status === "pending") {
+            statusText = "⏳ Pending Farmer Approval";
+            statusBg = "#D69E2E";
+          } else if (o.status === "rejected") {
+            statusText = "❌ Rejected & Refunded";
+            statusBg = "#E53E3E";
+          } else if (o.status === "confirmed") {
+            statusText = "✅ Accepted & Escrow Secured";
+            statusBg = "#319795";
+          } else if (o.status === "dispatched") {
+            statusText = "🚚 In Transit / Dispatched";
+            statusBg = "#3182CE";
+          } else if (o.paymentStatus === "escrow_released" || o.status === "delivered") {
+            statusText = "🎉 Delivered & Funds Released";
+            statusBg = "var(--success)";
+          }
+
+          // Timeline steps
+          const isStep1 = true; // Placed
+          const isStep2 = o.status === "confirmed" || o.status === "dispatched" || o.status === "delivered";
+          const isStep3 = o.status === "dispatched" || o.status === "delivered";
+          const isStep4 = o.status === "delivered";
+
+          let actionHtml = "";
+          if (isFarmer) {
+            if (o.status === "pending") {
+              actionHtml = `
+                <div style="display:flex; gap:6px;">
+                  <button class="btn btn-primary btn-sm" style="background:var(--success); border-color:var(--success);" onclick="app.updateOrderStatus('${o.id}', 'confirmed')">✔ Accept</button>
+                  <button class="btn btn-danger btn-sm" onclick="app.updateOrderStatus('${o.id}', 'rejected')">✖ Reject</button>
+                </div>
+              `;
+            } else if (o.status === "confirmed") {
+              actionHtml = `<button class="btn btn-primary btn-sm" onclick="app.updateOrderStatus('${o.id}', 'dispatched')">🚚 Dispatch Order</button>`;
+            } else if (o.status === "rejected") {
+              actionHtml = `<span style="font-size:0.85rem; color:var(--danger); font-weight:700;">Order Rejected</span>`;
+            } else if (o.status === "dispatched") {
+              actionHtml = `<span style="font-size:0.85rem; color:#3182CE; font-weight:700;">🚚 In Transit</span>`;
+            } else {
+              actionHtml = `<span style="font-size:0.85rem; color:var(--success); font-weight:700;">Completed</span>`;
+            }
+          } else {
+            // Buyer view
+            if (o.status === "pending") {
+              actionHtml = `<span style="font-size:0.85rem; color:#D69E2E; font-weight:700;">⏳ Awaiting Farmer</span>`;
+            } else if (o.status === "rejected") {
+              actionHtml = `<span style="font-size:0.85rem; color:var(--danger); font-weight:700;">💳 Refunded</span>`;
+            } else if (o.status === "confirmed" || o.status === "dispatched") {
+              actionHtml = `<button class="btn btn-primary btn-sm" onclick="app.updateOrderStatus('${o.id}', 'delivered')">✔ Confirm Received</button>`;
+            } else if (o.status === "delivered") {
+              actionHtml = o.rating
+                ? `<span style="font-size:0.88rem; color:var(--text-dim); font-weight:700;">Completed (⭐ ${o.rating}/5)</span>`
+                : `<button class="btn btn-outline btn-sm" onclick="app.openRatingModal('${o.id}')">⭐ Rate Quality</button>`;
+            } else {
+              actionHtml = `<span style="font-size:0.88rem; color:var(--text-dim); font-weight:700;">Completed</span>`;
+            }
+          }
 
           return `
             <tr>
@@ -1445,26 +1518,20 @@ const app = {
               <td>${o.quantityKg} kg</td>
               <td style="font-weight:700;">₹${o.totalPrice}</td>
               <td>
-                <span class="user-role-badge" style="background:${o.paymentStatus === "escrow_released" ? "var(--success)" : "#4A5568"}">
+                <span class="user-role-badge" style="background:${statusBg}; color:white;">
                   ${statusText}
                 </span>
                 <div class="order-timeline">
-                  <span class="timeline-step ${isStep1 ? (isStep2 ? "completed" : "active") : ""}">${t("stepPlaced", "1. Placed")}</span>
+                  <span class="timeline-step ${isStep1 ? "active" : ""}">${t("stepPlaced", "1. Placed")}</span>
                   <span class="timeline-arrow">➔</span>
-                  <span class="timeline-step ${isStep2 ? (isStep3 ? "completed" : "active") : ""}">${t("stepDispatched", "2. Dispatched")}</span>
+                  <span class="timeline-step ${isStep2 ? (isStep3 ? "completed" : "active") : (o.status === "rejected" ? "rejected" : "")}">${o.status === "rejected" ? "2. Rejected" : "2. Accepted"}</span>
                   <span class="timeline-arrow">➔</span>
-                  <span class="timeline-step ${isStep3 ? "completed" : ""}">${t("stepDelivered", "3. Delivered")}</span>
+                  <span class="timeline-step ${isStep3 ? (isStep4 ? "completed" : "active") : ""}">${t("stepDispatched", "3. Dispatched")}</span>
+                  <span class="timeline-arrow">➔</span>
+                  <span class="timeline-step ${isStep4 ? "completed" : ""}">${t("stepDelivered", "4. Delivered")}</span>
                 </div>
               </td>
-              <td>
-                ${
-                  canConfirmDelivery
-                    ? `<button class="btn btn-primary btn-sm" onclick="app.updateOrderStatus('${o.id}', 'delivered')">✔ Confirm Received</button>`
-                    : canRate
-                    ? `<button class="btn btn-outline btn-sm" onclick="app.openRatingModal('${o.id}')">⭐ Rate Quality</button>`
-                    : `<span style="font-size:0.88rem; color:var(--text-dim); font-weight:700;">Completed ${o.rating ? `(⭐ ${o.rating}/5)` : ""}</span>`
-                }
-              </td>
+              <td>${actionHtml}</td>
             </tr>
           `;
         })
@@ -1477,13 +1544,24 @@ const app = {
   async updateOrderStatus(orderId, status) {
     try {
       await api.updateOrderStatus(orderId, status);
-      showToast("Order completed! Escrow funds released to farmer.");
+      if (status === "confirmed") {
+        showToast("Order Accepted! Escrow funds secured.", "success");
+      } else if (status === "rejected") {
+        showToast("Order Rejected. Escrow funds refunded to buyer.", "info");
+      } else if (status === "delivered") {
+        showToast("Order completed! Escrow funds released to farmer.", "success");
+      } else if (status === "dispatched") {
+        showToast("Order status updated: Dispatched for Delivery.", "success");
+      } else {
+        showToast("Order status updated successfully.", "success");
+      }
       this.loadOrdersLedger();
       if (auth.isLoggedIn()) this.renderDashboardSummary();
     } catch (e) {
       showToast(e.message, "error");
     }
   },
+
 
   openRatingModal(orderId) {
     const idInput = document.getElementById("rateOrderId");

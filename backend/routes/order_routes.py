@@ -59,8 +59,9 @@ def create_order():
             "quantityKg": req_qty,
             "pricePerKg": unit_price,
             "totalPrice": total_price,
-            "status": "confirmed", # confirmed -> dispatched -> delivered -> rated
-            "paymentStatus": "held_in_escrow", # held_in_escrow -> released_to_farmer
+            "status": "pending", # pending -> confirmed/rejected -> dispatched -> delivered -> rated
+            "paymentStatus": "escrow_pending", # escrow_pending -> held_in_escrow -> released_to_farmer
+
             "transactionId": transaction_id,
             "deliveryOrigin": origin,
             "deliveryDestination": dest,
@@ -159,14 +160,58 @@ def update_order_status(order_id):
             if role not in ["buyer", "farmer"]:
                 return jsonify({"error": "Not authorized to update this order"}), 403
 
-        valid_statuses = ["confirmed", "dispatched", "delivered", "cancelled"]
+        valid_statuses = ["pending", "confirmed", "rejected", "dispatched", "delivered", "cancelled"]
         if new_status not in valid_statuses:
             return jsonify({"error": f"Invalid status. Must be one of: {', '.join(valid_statuses)}"}), 400
 
         updates = {"status": new_status}
 
+        # If farmer accepts order (confirmed)
+        if new_status == "confirmed":
+            updates["paymentStatus"] = "held_in_escrow"
+            try:
+                payments = db.get_all("payments") or []
+                for p in payments:
+                    if isinstance(p, dict) and str(p.get("orderId", "")) in [clean_order_id, str(order_id)]:
+                        db.update("payments", p.get("id"), {
+                            "escrowStatus": "held_in_escrow",
+                            "status": "escrow_secured"
+                        })
+            except Exception as pe:
+                print(f"Warning updating payment record: {pe}")
+
+        # If farmer rejects order (rejected)
+        elif new_status == "rejected":
+            updates["paymentStatus"] = "refunded_to_buyer"
+            try:
+                payments = db.get_all("payments") or []
+                for p in payments:
+                    if isinstance(p, dict) and str(p.get("orderId", "")) in [clean_order_id, str(order_id)]:
+                        db.update("payments", p.get("id"), {
+                            "escrowStatus": "refunded_to_buyer",
+                            "status": "refunded"
+                        })
+            except Exception as pe:
+                print(f"Warning updating payment record: {pe}")
+
+            # Restore produce quantity to listing
+            try:
+                produce_id = order.get("produceId")
+                if produce_id:
+                    produce = db.get_by_id("produce", produce_id)
+                    if produce:
+                        current_qty = float(produce.get("quantityKg", 0))
+                        req_qty = float(order.get("quantityKg", 0))
+                        new_qty = current_qty + req_qty
+                        db.update("produce", produce_id, {
+                            "quantityKg": new_qty,
+                            "status": "listed"
+                        })
+            except Exception as re:
+                print(f"Warning restoring produce quantity: {re}")
+
         # If delivered, automatically release escrow funds to the farmer
-        if new_status == "delivered":
+        elif new_status == "delivered":
             updates["paymentStatus"] = "escrow_released"
             try:
                 payments = db.get_all("payments") or []
